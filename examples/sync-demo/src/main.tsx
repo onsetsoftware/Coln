@@ -26,7 +26,9 @@ const hashUrl = location.hash.slice(1)
 let handle: CrdtDocHandle<GraphDocType>
 
 if (isValidAutomergeUrl(hashUrl)) {
+  console.log(`Loading document from URL: ${hashUrl}`)
   handle = await repo.find(hashUrl, coln)
+  console.log(handle.doc())
 } else {
   handle = repo.create(undefined, coln)
 }
