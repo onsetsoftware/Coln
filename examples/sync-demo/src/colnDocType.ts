@@ -30,73 +30,64 @@ export type ColnFfi<View, Transaction> = {
 }
 
 export type AnyColnFfi = ColnFfi<any, any>
-export type ColnFfiView<Ffi extends AnyColnFfi> = Ffi extends ColnFfi<infer View, any> ? View : never
-export type ColnFfiTransaction<Ffi extends AnyColnFfi> = Ffi extends ColnFfi<any, infer Transaction> ? Transaction : never
+export type ColnFfiView<Ffi extends AnyColnFfi> =
+  Ffi extends ColnFfi<infer View, any> ? View : never
+export type ColnFfiTransaction<Ffi extends AnyColnFfi> =
+  Ffi extends ColnFfi<any, infer Transaction> ? Transaction : never
 
-export type ColnDocument<Ffi extends AnyColnFfi> = {
-  realm: ColnFfiView<Ffi>
+type RawColnDocument = {
   store: StoreHandle
   heads: string[]
 }
 
-export type ColnChange<Ffi extends AnyColnFfi> = (tx: ColnFfiTransaction<Ffi>) => void
+export type ColnDocument<Ffi extends AnyColnFfi | undefined = undefined> = RawColnDocument &
+  (Ffi extends AnyColnFfi ? { realm: ColnFfiView<Ffi> } : {})
+
+export type ColnChange<Ffi extends AnyColnFfi | undefined = undefined> = (
+  tx: Ffi extends AnyColnFfi ? ColnFfiTransaction<Ffi> : TransactionHandle,
+) => void
 
 export type ColnDocType<
-  Ffi extends AnyColnFfi,
+  Ffi extends AnyColnFfi | undefined = undefined,
   View = ColnDocument<Ffi>,
   Change = ColnChange<Ffi>,
-  Init = undefined,
+  Init = unknown,
 > = DocumentType<ColnState, View, Change, Init>
 
-export type ColnDocTypeOptions<
-  Ffi extends AnyColnFfi,
-  View = ColnDocument<Ffi>,
-  Change = ColnChange<Ffi>,
-  Init = undefined,
-> = {
-  name?: string
-  view?: (doc: ColnDocument<Ffi>, state: ColnState) => View
-  change?: (tx: ColnFfiTransaction<Ffi>, change: Change, state: ColnState) => void
-  init?: (init: Init, tx: ColnFfiTransaction<Ffi>, state: ColnState) => void
-  hasData?: (state: ColnState) => boolean
-}
-
+export function colnDocType(): ColnDocType
 export function colnDocType<
   Ffi extends AnyColnFfi,
   View = ColnDocument<Ffi>,
   Change = ColnChange<Ffi>,
-  Init = undefined,
->(
-  ffi: Ffi,
-  options: ColnDocTypeOptions<Ffi, View, Change, Init> = {}
-): ColnDocType<Ffi, View, Change, Init> {
-  const schemaJson = JSON.stringify(ffi.schema)
-  const projectView = options.view ?? ((doc: ColnDocument<Ffi>) => doc as unknown as View)
-  const applyChange =
-    options.change ??
-    ((tx: ColnFfiTransaction<Ffi>, change: Change) => {
-      ;(change as unknown as ColnChange<Ffi>)(tx)
-    })
-
-  const makeState = (ctx: DocumentTypeContext): ColnState => ({
-    store: StoreHandle.fromTheory(schemaJson),
+  Init = unknown,
+>(ffi: Ffi): ColnDocType<Ffi, View, Change, Init>
+export function colnDocType(ffi?: AnyColnFfi): DocumentType<ColnState, any, any, unknown> {
+  const makeEmptyState = (ctx: DocumentTypeContext): ColnState => ({
+    store: StoreHandle.empty(),
     actor: ctx.peerId,
   })
 
-  const makeDocument = (state: ColnState): ColnDocument<Ffi> => ({
-    realm: new ffi.View(state.store),
+  const makeState = (schema: unknown, ctx: DocumentTypeContext): ColnState => {
+    const resolvedSchema = schema ?? ffi?.schema
+    if (resolvedSchema === undefined) {
+      throw new Error("creating a Coln document requires a schema")
+    }
+    return {
+      store: StoreHandle.fromTheory(JSON.stringify(resolvedSchema)),
+      actor: ctx.peerId,
+    }
+  }
+
+  const makeDocument = (state: ColnState) => ({
+    ...(ffi ? { realm: new ffi.View(state.store) } : {}),
     store: state.store,
     heads: state.store.heads(),
   })
 
-  const runTransaction = (
-    state: ColnState,
-    body: (tx: ColnFfiTransaction<Ffi>) => void
-  ): ColnState => {
+  const runTransaction = (state: ColnState, body: (tx: unknown) => void): ColnState => {
     const tx = state.store.beginTransaction()
     try {
-      const typedTx = new ffi.Transaction(state.store, tx)
-      body(typedTx)
+      body(ffi ? new ffi.Transaction(state.store, tx) : tx)
       const result = tx.commit()
       return { ...state, store: result.takeStore() }
     } catch (error) {
@@ -109,20 +100,14 @@ export function colnDocType<
     }
   }
 
-  return defineDocumentType<ColnState, View, Change, Init>({
-    name: options.name ?? "coln",
-    empty: ctx => makeState(ctx),
-    init: (init, ctx) => {
-      const state = makeState(ctx)
-      return options.init
-        ? runTransaction(state, tx => options.init?.(init, tx, state))
-        : state
-    },
-    view: state => projectView(makeDocument(state), state),
-    change: (state, change) =>
-      runTransaction(state, tx => applyChange(tx, change, state)),
+  return defineDocumentType<ColnState, any, any, unknown>({
+    name: "coln",
+    empty: makeEmptyState,
+    init: makeState,
+    view: makeDocument,
+    change: (state, change) => runTransaction(state, change),
     heads: state => state.store.heads(),
-    hasData: state => options.hasData?.(state) ?? state.store.heads().length > 0,
+    hasData: state => state.store.heads().length > 0,
     sedimentree: {
       metadata: state => chunks(state).map(chunkToMeta),
       materialize: (state, metas) => {

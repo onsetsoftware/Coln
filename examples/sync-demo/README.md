@@ -5,9 +5,9 @@ custom document type. Custom document types aren't actually a thing in
 `automerge-repo` (yet), so we use a vendored version of `automerge-repo` from
 the `doctypes` branch which adds support for custom document types.
 
-We define a function which takes a compiled FFI bindings from compiler
-and turns it into an automerge-repo document type. This is the `colnDocType`
-function.
+We define a function which optionally takes compiled FFI bindings from the
+compiler and turns them into an automerge-repo document type. Without bindings,
+`colnDocType()` can find and sync any Coln store through raw runtime primitives.
 
 Then, we can create and find handles containing these documents, modify and
 render them, and synchronize them using the public subduction sycn server.
@@ -30,6 +30,12 @@ generic `src/colnDocType.ts` consumes that compiled FFI directly:
 
 ```ts
 const coln = colnDocType(GraphRealm)
+```
+
+An existing store can also be loaded without knowing its schema:
+
+```ts
+const handle = await repo.find(url, colnDocType())
 ```
 
 `GraphRealm.json` is passed directly to `StoreHandle.fromTheory(...)`; no local

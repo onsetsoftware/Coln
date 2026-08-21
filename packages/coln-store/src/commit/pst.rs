@@ -44,6 +44,34 @@ pub fn decode_store(data: &[u8]) -> Result<Store, StoreIntError> {
     decode_store_chunks(encoded.next_oid, encoded.chunks)
 }
 
+/// Decode a store from individually framed commit chunks received during sync.
+///
+/// Store-produced roots currently allocate table OIDs sequentially without
+/// deletion, so the next OID can be recovered from the root tables.
+pub fn decode_commit_chunks(
+    chunk_bytes: impl IntoIterator<Item = impl AsRef<[u8]>>,
+) -> Result<Store, StoreIntError> {
+    let chunks = chunk_bytes
+        .into_iter()
+        .map(|bytes| Chunk::decode(bytes.as_ref()))
+        .collect::<Result<Vec<_>, _>>()?;
+    let root = single_root(&chunks)?;
+    let root_commit = Commit::from_chunk(root.clone(), |_| None)?;
+    let root_payload = root_commit.root_payload()?;
+    let next_oid = root_payload
+        .tables
+        .iter()
+        .map(|table| table.oid)
+        .max()
+        .map_or(Ok(0), |oid| {
+            oid.checked_add(1).ok_or_else(|| {
+                CodecError::DataFormatError("root table OID cannot be incremented".into())
+            })
+        })?;
+
+    decode_store_chunks(next_oid, chunks)
+}
+
 struct EncodedStore {
     next_oid: TableOid,
     chunks: Vec<Chunk>,
@@ -90,20 +118,8 @@ fn write_commit_chunk(buf: &mut Vec<u8>, commit: &Commit<'_>) {
 }
 
 fn decode_store_chunks(next_oid: TableOid, chunks: Vec<Chunk>) -> Result<Store, StoreIntError> {
-    let roots = chunks
-        .iter()
-        .filter(|chunk| chunk.chunk_type() == ChunkType::Root)
-        .collect::<Vec<_>>();
-    if roots.is_empty() {
-        return Err(CodecError::DataFormatError("commit graph has no root commit".into()).into());
-    }
-    if roots.len() > 1 {
-        return Err(
-            CodecError::DataFormatError("commit graph has multiple root commits".into()).into(),
-        );
-    }
-
-    let root_commit = Commit::from_chunk((*roots[0]).clone(), |_| None)?;
+    let root = single_root(&chunks)?;
+    let root_commit = Commit::from_chunk(root.clone(), |_| None)?;
     let root_payload = root_commit.root_payload()?;
     let mut store = Store::from_root_commit_data(next_oid, root_payload)?;
     store.record_in_commit_graph(root_commit);
@@ -125,6 +141,22 @@ fn decode_store_chunks(next_oid: TableOid, chunks: Vec<Chunk>) -> Result<Store, 
     store.apply_commits(commits)?;
 
     Ok(store)
+}
+
+fn single_root(chunks: &[Chunk]) -> Result<&Chunk, CodecError> {
+    let roots = chunks
+        .iter()
+        .filter(|chunk| chunk.chunk_type() == ChunkType::Root)
+        .collect::<Vec<_>>();
+    match roots.as_slice() {
+        [] => Err(CodecError::DataFormatError(
+            "commit graph has no root commit".into(),
+        )),
+        [root] => Ok(root),
+        _ => Err(CodecError::DataFormatError(
+            "commit graph has multiple root commits".into(),
+        )),
+    }
 }
 
 #[cfg(test)]
@@ -404,6 +436,42 @@ mod tests {
             restored.commits().heads().copied().collect::<Vec<_>>(),
             vec![commit]
         );
+    }
+
+    #[test]
+    fn commit_chunks_bootstrap_empty_store() {
+        let store = Store::new();
+        let root = store.commits().root_commit().expect("root").hash();
+        let chunks = store
+            .commit_chunks_after(&[])
+            .into_iter()
+            .map(|chunk| chunk.bytes)
+            .collect::<Vec<_>>();
+
+        let restored = decode_commit_chunks(chunks).expect("store from chunks");
+
+        assert_eq!(restored.table_count(), 0);
+        assert_eq!(restored.heads(), vec![root]);
+    }
+
+    #[test]
+    fn commit_chunks_bootstrap_schema_and_data() {
+        let mut store = Store::try_from_theory(int_theory()).expect("store");
+        let table = Path::from("T");
+        let mut txn = store.transaction();
+        txn.add(&table, vec![99_i64.into()]).expect("add row");
+        let commit = txn.commit().expect("commit");
+        let chunks = store
+            .commit_chunks_after(&[])
+            .into_iter()
+            .map(|chunk| chunk.bytes)
+            .collect::<Vec<_>>();
+
+        let restored = decode_commit_chunks(chunks).expect("store from chunks");
+
+        let restored_table = restored.table_at(&table).expect("table");
+        assert_eq!(restored_table.cell_at(0, 0), Some(CellValue::Int(99)));
+        assert_eq!(restored.heads(), vec![commit]);
     }
 
     #[test]

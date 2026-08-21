@@ -48,6 +48,23 @@ test("a tab already open on the doc receives later coln edits", async ({ browser
   await expect(bob.getByTestId("edge-item")).toHaveCount(1)
 })
 
+test("a store can be found without its schema or FFI", async ({ browser }) => {
+  const context = await browser.newContext()
+  const alice = await context.newPage()
+
+  await alice.goto("/")
+  await expect(alice.getByTestId("doc-url")).toHaveValue(/^automerge:/)
+  await alice.getByTestId("add-vertex").click()
+  await alice.getByTestId("add-vertex").click()
+
+  const url = await alice.getByTestId("doc-url").inputValue()
+  const raw = await context.newPage()
+  await raw.goto(`/?raw#${url}`)
+
+  await expect(raw.getByTestId("raw-heads-count")).not.toHaveText("0")
+  await expect(raw.getByTestId("raw-vertices-count")).toHaveText("2")
+})
+
 async function addTwoVerticesAndEdge(page: Page) {
   await page.getByTestId("add-vertex").click()
   await page.getByTestId("add-vertex").click()

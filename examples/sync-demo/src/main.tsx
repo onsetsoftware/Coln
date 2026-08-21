@@ -15,30 +15,70 @@ import * as GraphRealm from "./generated/GraphRealm.ts"
 
 initSync({ module: Uint8Array.from(atob(wasmBase64), c => c.charCodeAt(0)) })
 
-type GraphDocType = ColnDocType<typeof GraphRealm>
-
-const coln = colnDocType(GraphRealm)
 const repo = new Repo({
   subductionWebsocketEndpoints: ["wss://subduction.sync.inkandswitch.com"],
 })
 
 const hashUrl = location.hash.slice(1)
-let handle: CrdtDocHandle<GraphDocType>
+const rawMode = new URLSearchParams(location.search).has("raw")
 
-if (isValidAutomergeUrl(hashUrl)) {
-  console.log(`Loading document from URL: ${hashUrl}`)
-  handle = await repo.find(hashUrl, coln)
-  console.log(handle.doc())
+console.log({
+  hashUrl,
+  rawMode,
+})
+
+if (rawMode) {
+  if (!isValidAutomergeUrl(hashUrl)) {
+    throw new Error("Raw mode requires a document URL in the location hash")
+  }
+  const handle = await repo.find(hashUrl, colnDocType())
+  location.hash = handle.url
+  Object.assign(window, { repo, handle })
+  ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+    <React.StrictMode>
+      <RawApp handle={handle} />
+    </React.StrictMode>
+  )
 } else {
-  handle = repo.create(undefined, coln)
+  type GraphDocType = ColnDocType<typeof GraphRealm>
+  const coln = colnDocType(GraphRealm)
+  let handle: CrdtDocHandle<GraphDocType>
+
+  if (isValidAutomergeUrl(hashUrl)) {
+    handle = await repo.find(hashUrl, coln)
+  } else {
+    handle = repo.create(undefined, coln)
+  }
+
+  location.hash = handle.url
+  Object.assign(window, { repo, handle })
+  ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+    <React.StrictMode>
+      <App handle={handle} />
+    </React.StrictMode>
+  )
 }
 
-location.hash = handle.url
+function RawApp({ handle }: { handle: CrdtDocHandle<ColnDocType> }) {
+  const [doc, setDoc] = React.useState(() => handle.doc())
 
-Object.assign(window, { repo, handle })
+  React.useEffect(() => {
+    const update = () => setDoc(handle.doc())
+    handle.on("change", update)
+    handle.on("heads-changed", update)
+    return () => {
+      handle.off("change", update)
+      handle.off("heads-changed", update)
+    }
+  }, [handle])
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
-    <App handle={handle} />
-  </React.StrictMode>
-)
+  return (
+    <main>
+      <h1>Generic Coln store</h1>
+      <div data-testid="raw-heads-count">{doc.heads.length}</div>
+      <div data-testid="raw-vertices-count">
+        {doc.store.scanTable("GraphRealm.V").length}
+      </div>
+    </main>
+  )
+}
