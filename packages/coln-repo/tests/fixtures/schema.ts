@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-import type { ColnSchema } from "@coln-project/repo"
+import type { ColnSchema } from "../../src/index.js"
 
 export const itemSchema = {
   entities: [

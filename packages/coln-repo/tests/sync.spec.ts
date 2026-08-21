@@ -34,6 +34,38 @@ test("loads, syncs, and stores a Coln document without schema on find", async ({
   await expectRows(reloaded, ["one", "two"])
 })
 
+test("wraps created and found handles with typed FFI views and changes", async ({ browser }) => {
+  const context = await browser.newContext()
+  const creator = await openPage(context.newPage())
+  const url = await creator.evaluate(() => window.colnTest.createTyped())
+
+  expect(await creator.evaluate(() => window.colnTest.typedEqualsSelf())).toBe(true)
+  expect(await creator.evaluate(() => window.colnTest.typedIsRaw())).toBe(true)
+  await creator.evaluate(() => window.colnTest.addTyped("one"))
+  await creator.evaluate(() => window.colnTest.addRawThroughTyped("raw"))
+  await creator.evaluate(() => window.colnTest.flush())
+
+  const finder = await openPage(context.newPage())
+  await finder.evaluate(url => window.colnTest.findTyped(url), url)
+  await expectTypedCount(finder, "one", 1)
+  await expectTypedCount(finder, "raw", 1)
+
+  await finder.evaluate(() => window.colnTest.addTyped("two"))
+  await finder.evaluate(() => window.colnTest.flush())
+  await expectTypedCount(creator, "two", 1)
+
+  await creator.evaluate(() => window.colnTest.shutdown())
+  await finder.evaluate(() => window.colnTest.shutdown())
+  await creator.close()
+  await finder.close()
+
+  const reloaded = await openPage(context.newPage())
+  await reloaded.evaluate(url => window.colnTest.findTyped(url), url)
+  await expectTypedCount(reloaded, "one", 1)
+  await expectTypedCount(reloaded, "raw", 1)
+  await expectTypedCount(reloaded, "two", 1)
+})
+
 async function openPage(pagePromise: Promise<Page>): Promise<Page> {
   const page = await pagePromise
   await page.goto("/")
@@ -61,4 +93,10 @@ async function expectRows(page: Page, values: string[]) {
       table),
     )
     .toEqual([...values].sort())
+}
+
+async function expectTypedCount(page: Page, value: string, count: number) {
+  await expect
+    .poll(() => page.evaluate(value => window.colnTest.typedCount(value), value))
+    .toBe(count)
 }

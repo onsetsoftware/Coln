@@ -10,3 +10,16 @@ export {
   type ColnSchema,
   type ColnState,
 } from "./colnDocType.js"
+
+export {
+  wrapColnHandle,
+  type AnyColnFfi,
+  type ColnFfi,
+  type ColnFfiTransaction,
+  type ColnFfiView,
+  type ColnChangeOptions,
+  type ColnHandle,
+  type ColnHandleDocument,
+  type ColnHandleTransaction,
+  type RawColnHandle,
+} from "./colnHandle.js"
