@@ -8,14 +8,14 @@ import {
   type TransactionHandle,
   type Value,
 } from "@coln-project/runtime"
-import { itemSchema as schema } from "./schema"
+export { itemSchema as schema } from "./schema"
 
-export { schema }
+interface Root<T> {
+  Items: (value: Value) => T
+}
 
 export class View {
-  root: {
-    Items: (value: Value) => RowIdSet.View
-  }
+  root: Root<RowIdSet.View>
 
   constructor(store: StoreHandle) {
     this.root = {
@@ -25,9 +25,7 @@ export class View {
 }
 
 export class Transaction extends View {
-  declare root: {
-    Items: (value: Value) => RowIdSet.Transaction
-  }
+  declare root: Root<RowIdSet.Transaction>
 
   constructor(store: StoreHandle, transaction: TransactionHandle) {
     super(store)

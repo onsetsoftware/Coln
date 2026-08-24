@@ -37,7 +37,6 @@ export type ColnFfiTransaction<Ffi extends AnyColnFfi> =
 
 type RawColnDocument = {
   store: StoreHandle
-  heads: string[]
 }
 
 export type ColnDocument<Ffi extends AnyColnFfi | undefined = undefined> = RawColnDocument &
@@ -81,7 +80,6 @@ export function colnDocType(ffi?: AnyColnFfi): DocumentType<ColnState, any, any,
   const makeDocument = (state: ColnState) => ({
     ...(ffi ? { realm: new ffi.View(state.store) } : {}),
     store: state.store,
-    heads: state.store.heads(),
   })
 
   const runTransaction = (state: ColnState, body: (tx: unknown) => void): ColnState => {

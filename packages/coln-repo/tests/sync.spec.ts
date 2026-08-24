@@ -1,12 +1,70 @@
-// SPDX-FileCopyrightText: 2026 Coln contributors
+// spdx-filecopyrighttext: 2026 coln contributors
 //
-// SPDX-License-Identifier: Apache-2.0 OR MIT
+// spdx-license-identifier: apache-2.0 or mit
 
 import { expect, test, type Page } from "@playwright/test"
-import type { AutomergeUrl } from "@automerge/automerge-repo"
+import {
+  initSubduction,
+  Repo,
+  type AutomergeUrl,
+  type CrdtDocHandle,
+} from "@automerge/automerge-repo"
+import { colnDocType } from "../src/index.js"
 import { itemSchema } from "./fixtures/schema"
 
 const table = "Test.Items"
+type RawHandle = CrdtDocHandle<typeof colnDocType>
+
+test("browser and Node repos create, find, and update each other's stores", async ({ browser }) => {
+  await initSubduction()
+  const context = await browser.newContext()
+  let nodeRepo: Repo | undefined
+
+  try {
+    nodeRepo = new Repo({
+      subductionWebsocketEndpoints: ["ws://127.0.0.1:3031"],
+    })
+    const browserCreator = await openPage(context.newPage())
+    const browserUrl = await browserCreator.evaluate(
+      schema => window.colnTest.create(schema),
+      itemSchema,
+    )
+    await add(browserCreator, "browser-one")
+    await browserCreator.evaluate(() => window.colnTest.flush())
+
+    const nodeFinder = await nodeRepo.find(browserUrl, colnDocType)
+    await expectNodeRows(nodeFinder, ["browser-one"])
+    await expectSameHeads(browserCreator, nodeFinder)
+
+    addInNode(nodeFinder, "node-two")
+    await nodeRepo.flush()
+    await expectRows(browserCreator, ["browser-one", "node-two"])
+    await expectSameHeads(browserCreator, nodeFinder)
+
+    const nodeCreator = nodeRepo.create(itemSchema, colnDocType)
+    addInNode(nodeCreator, "node-one")
+    await nodeRepo.flush()
+
+    const browserFinder = await openPage(context.newPage())
+    await browserFinder.evaluate(
+      url => window.colnTest.find(url),
+      nodeCreator.url as AutomergeUrl,
+    )
+    await expectRows(browserFinder, ["node-one"])
+    await expectSameHeads(browserFinder, nodeCreator)
+
+    await add(browserFinder, "browser-two")
+    await browserFinder.evaluate(() => window.colnTest.flush())
+    await expectNodeRows(nodeCreator, ["browser-two", "node-one"])
+    await expectSameHeads(browserFinder, nodeCreator)
+  } finally {
+    try {
+      await nodeRepo?.shutdown()
+    } finally {
+      await context.close()
+    }
+  }
+})
 
 test("loads, syncs, and stores a Coln document without schema on find", async ({ browser }) => {
   const context = await browser.newContext()
@@ -83,16 +141,48 @@ async function add(page: Page, value: string) {
 async function expectRows(page: Page, values: string[]) {
   await expect
     .poll(() =>
-      page.evaluate(table =>
-        window.colnTest
-          .rows(table)
-          .map(row => row.values[0])
-          .filter(value => value?.tag === "string")
-          .map(value => value.value)
-          .sort(),
-      table),
+      page.evaluate(
+        table =>
+          window.colnTest
+            .rows(table)
+            .map(row => row.values[0])
+            .filter(value => value?.tag === "string")
+            .map(value => value.value)
+            .sort(),
+        table,
+      ),
     )
     .toEqual([...values].sort())
+}
+
+function addInNode(handle: RawHandle, value: string) {
+  handle.change(transaction => transaction.add(table, [{ tag: "string", value }]))
+}
+
+async function expectNodeRows(handle: RawHandle, values: string[]) {
+  await expect
+    .poll(() =>
+      handle
+        .doc()
+        .store.scanTable(table)
+        .map(row => row.values[0])
+        .filter(value => value?.tag === "string")
+        .map(value => value.value)
+        .sort(),
+    )
+    .toEqual([...values].sort())
+}
+
+async function expectSameHeads(page: Page, handle: RawHandle) {
+  await expect
+    .poll(async () => {
+      const browserHeads = (await page.evaluate(() => window.colnTest.heads())).sort()
+      const nodeHeads = handle.heads().sort()
+      return browserHeads.join(",") === nodeHeads.join(",")
+        ? "equal"
+        : `browser: ${browserHeads.join(",")}; Node: ${nodeHeads.join(",")}`
+    })
+    .toBe("equal")
 }
 
 async function expectTypedCount(page: Page, value: string, count: number) {

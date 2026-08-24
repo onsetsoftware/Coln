@@ -1,7 +1,3 @@
-// SPDX-FileCopyrightText: 2026 Coln contributors
-//
-// SPDX-License-Identifier: Apache-2.0 OR MIT
-
 import {
   Repo,
   type AutomergeUrl,
@@ -13,7 +9,6 @@ import type { RowView, Value } from "@coln-project/runtime"
 import {
   colnDocType,
   wrapColnHandle,
-  type ColnDocType,
   type ColnHandle,
   type ColnSchema,
 } from "../../src/index.js"
@@ -21,12 +16,15 @@ import * as itemFfi from "../fixtures/itemFfi"
 
 initSync({ module: Uint8Array.from(atob(wasmBase64), char => char.charCodeAt(0)) })
 
+type RawHandle = CrdtDocHandle<typeof colnDocType>
+type ItemHandle = ColnHandle<typeof itemFfi>
+
 const repo = new Repo({
   subductionWebsocketEndpoints: ["ws://127.0.0.1:3031"],
 })
-let handle: CrdtDocHandle<ColnDocType> | undefined
-let typedHandle: ColnHandle<typeof itemFfi> | undefined
-let typedRawHandle: CrdtDocHandle<ColnDocType> | undefined
+let handle: RawHandle | undefined
+let typedHandle: ItemHandle | undefined
+let typedRawHandle: RawHandle | undefined
 
 const api = {
   create(schema: ColnSchema): AutomergeUrl {
@@ -88,7 +86,7 @@ const api = {
   },
 
   heads(): string[] {
-    return currentHandle().doc().heads
+    return currentHandle().heads()
   },
 
   async flush(): Promise<void> {
@@ -100,12 +98,12 @@ const api = {
   },
 }
 
-function currentHandle(): CrdtDocHandle<ColnDocType> {
+function currentHandle(): RawHandle {
   if (!handle) throw new Error("no Coln store is open")
   return handle
 }
 
-function currentTypedHandle(): ColnHandle<typeof itemFfi> {
+function currentTypedHandle(): ItemHandle {
   if (!typedHandle) throw new Error("no typed Coln store is open")
   return typedHandle
 }

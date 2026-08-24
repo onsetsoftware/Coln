@@ -1,44 +1,35 @@
-// SPDX-FileCopyrightText: 2026 Coln contributors
-//
-// SPDX-License-Identifier: Apache-2.0 OR MIT
-
 import { StoreHandle, type CommitChunk, type TransactionHandle } from "@coln-project/runtime"
-import {
-  defineDocumentType,
-  type DocumentType,
-  type SedimentreeMeta,
-} from "@automerge/automerge-repo/slim"
+import { defineDocumentType, type SedimentreeMeta } from "@automerge/automerge-repo/slim"
 
-export type ColnSchema = object
+type JsonValue = null | boolean | number | string | readonly JsonValue[] | JsonObject
+type JsonObject = { readonly [key: string]: JsonValue }
 
-export interface ColnState {
-  store: StoreHandle
+export interface ColnSchema {
+  entities: readonly JsonValue[]
+  rules: readonly JsonValue[]
 }
 
 export interface ColnDocument {
   store: StoreHandle
-  heads: string[]
 }
 
 export type ColnChange = (transaction: TransactionHandle) => void
 
-export type ColnDocType = DocumentType<ColnState, ColnDocument, ColnChange, ColnSchema>
-
-export const colnDocType: ColnDocType = defineDocumentType({
+export const colnDocType = defineDocumentType<ColnDocument, ColnDocument, ColnChange, ColnSchema>({
   name: "coln",
   empty: () => ({ store: StoreHandle.empty() }),
   init: schema => ({ store: StoreHandle.fromTheory(serializeSchema(schema)) }),
-  view: state => ({ store: state.store, heads: state.store.heads() }),
+  view: state => ({ store: state.store }),
   change: (state, change) => runTransaction(state, change),
   heads: state => state.store.heads(),
   hasData: state => state.store.heads().length > 0,
   sedimentree: {
-    metadata: state => chunks(state).map(chunkToMeta),
-    materialize: (state, metas) => {
-      const wanted = new Set(metas.map(meta => meta.head))
-      return chunks(state)
-        .filter(chunk => wanted.has(chunk.hash))
-        .map(chunk => ({ ...chunkToMeta(chunk), bytes: new Uint8Array(chunk.bytes) }))
+    metadata: state => commitChunks(state).map(commitMetadata),
+    materialize: (state, metadata) => {
+      const wantedHeads = new Set(metadata.map(entry => entry.head))
+      return commitChunks(state)
+        .filter(chunk => wantedHeads.has(chunk.hash))
+        .map(chunk => ({ ...commitMetadata(chunk), bytes: new Uint8Array(chunk.bytes) }))
     },
     apply: (state, blobs) => {
       if (blobs.length > 0) {
@@ -46,18 +37,18 @@ export const colnDocType: ColnDocType = defineDocumentType({
       }
       return state
     },
-    liveHashes: state => chunks(state).map(chunk => chunk.hash),
+    liveHashes: state => commitChunks(state).map(chunk => chunk.hash),
   },
 })
 
-function runTransaction(state: ColnState, change: ColnChange): ColnState {
-  const transaction = state.store.beginTransaction()
+function runTransaction(document: ColnDocument, change: ColnChange): ColnDocument {
+  const transaction = document.store.beginTransaction()
   try {
     change(transaction)
-    const result = transaction.commit()
-    return { store: result.takeStore() }
+    const commit = transaction.commit()
+    return { store: commit.takeStore() }
   } catch (error) {
-    state.store = transaction.takeStore()
+    document.store = transaction.takeStore()
     throw error
   }
 }
@@ -68,10 +59,10 @@ function serializeSchema(schema: ColnSchema): string {
   return serialized
 }
 
-function chunks(state: ColnState): CommitChunk[] {
-  return state.store.commitChunksAfter([])
+function commitChunks(document: ColnDocument): CommitChunk[] {
+  return document.store.commitChunksAfter([])
 }
 
-function chunkToMeta(chunk: CommitChunk): SedimentreeMeta {
+function commitMetadata(chunk: CommitChunk): SedimentreeMeta {
   return { kind: "commit", head: chunk.hash, parents: chunk.parents }
 }

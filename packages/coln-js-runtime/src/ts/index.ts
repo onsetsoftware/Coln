@@ -5,6 +5,8 @@
 export type { CommitChunk, RowRef, RowView, Value } from "#wasm-bodge/bindings";
 export { CommitResult, StoreHandle, TransactionHandle, valueEqual } from "#wasm-bodge/bindings"
 
+export type { RealmBindings } from "./RealmBindings"
+
 export * as ColnSet from "./ColnSet";
 
 export * as ColnRef from "./ColnRef";

@@ -22,11 +22,6 @@ const repo = new Repo({
 const hashUrl = location.hash.slice(1)
 const rawMode = new URLSearchParams(location.search).has("raw")
 
-console.log({
-  hashUrl,
-  rawMode,
-})
-
 if (rawMode) {
   if (!isValidAutomergeUrl(hashUrl)) {
     throw new Error("Raw mode requires a document URL in the location hash")
@@ -75,7 +70,7 @@ function RawApp({ handle }: { handle: CrdtDocHandle<ColnDocType> }) {
   return (
     <main>
       <h1>Generic Coln store</h1>
-      <div data-testid="raw-heads-count">{doc.heads.length}</div>
+      <div data-testid="raw-heads-count">{handle.heads().length}</div>
       <div data-testid="raw-vertices-count">
         {doc.store.scanTable("GraphRealm.V").length}
       </div>

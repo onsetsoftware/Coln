@@ -2,24 +2,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-export {
-  colnDocType,
-  type ColnChange,
-  type ColnDocument,
-  type ColnDocType,
-  type ColnSchema,
-  type ColnState,
-} from "./colnDocType.js"
+export { colnDocType, type ColnChange, type ColnDocument, type ColnSchema } from "./colnDocType.js"
 
 export {
+  create,
+  find,
   wrapColnHandle,
-  type AnyColnFfi,
-  type ColnFfi,
-  type ColnFfiTransaction,
-  type ColnFfiView,
-  type ColnChangeOptions,
   type ColnHandle,
-  type ColnHandleDocument,
-  type ColnHandleTransaction,
-  type RawColnHandle,
+  type ColnTransaction,
 } from "./colnHandle.js"

@@ -1,113 +1,86 @@
-// SPDX-FileCopyrightText: 2026 Coln contributors
-//
-// SPDX-License-Identifier: Apache-2.0 OR MIT
+import type { AutomergeUrl, CrdtDocHandle, Repo } from "@automerge/automerge-repo"
+import type { RealmBindings, TransactionHandle } from "@coln-project/runtime"
+import {
+  colnDocType,
+  type ColnDocument,
+  type ColnSchema,
+} from "./colnDocType.js"
 
-import type { CrdtDocHandle } from "@automerge/automerge-repo"
-import { StoreHandle, type TransactionHandle } from "@coln-project/runtime"
-import type { ColnDocType, ColnDocument, ColnSchema } from "./colnDocType.js"
-
-export interface ColnFfi<View, Transaction> {
-  schema: ColnSchema
-  View: new (store: StoreHandle) => View
-  Transaction: new (store: StoreHandle, transaction: TransactionHandle) => Transaction
+type RawColnHandle = CrdtDocHandle<typeof colnDocType>
+export type ColnTransaction<Bindings extends RealmBindings> = TransactionHandle & {
+  root: InstanceType<Bindings["Transaction"]>["root"]
 }
 
-export type AnyColnFfi = ColnFfi<unknown, unknown>
-
-export type ColnFfiView<Ffi extends AnyColnFfi> =
-  Ffi extends ColnFfi<infer View, unknown> ? View : never
-
-export type ColnFfiTransaction<Ffi extends AnyColnFfi> =
-  Ffi extends ColnFfi<unknown, infer Transaction> ? Transaction : never
-
-export type RawColnHandle = CrdtDocHandle<ColnDocType>
-
-export type ColnHandleDocument<Ffi extends AnyColnFfi> = ColnDocument & {
-  realm: ColnFfiView<Ffi>
+export interface ColnHandle<Bindings extends RealmBindings> extends RawColnHandle {
+  doc(): ColnDocument & {
+    realm: InstanceType<Bindings["View"]>
+  }
+  change(change: (transaction: ColnTransaction<Bindings>) => void): void
 }
 
-export type ColnHandleTransaction<Ffi extends AnyColnFfi> = TransactionHandle &
-  ColnFfiTransaction<Ffi>
+const bindingsSymbol = Symbol.for("@coln-project/repo/realm-bindings")
 
-export type ColnChangeOptions = Parameters<RawColnHandle["change"]>[1]
+export function wrapColnHandle<Bindings extends RealmBindings>(
+  handle: RawColnHandle,
+  bindings: Bindings,
+): ColnHandle<Bindings> {
+  // this allows us to access the existing bindings in a typesafe way
+  const existingBindings = Reflect.get(handle, bindingsSymbol) as RealmBindings | undefined
 
-export type ColnHandle<Ffi extends AnyColnFfi> = {
-  doc(): ColnHandleDocument<Ffi>
-  change(
-    change: (transaction: ColnHandleTransaction<Ffi>) => void,
-    options?: ColnChangeOptions,
-  ): void
-} & RawColnHandle
-
-interface ColnHandleBinding {
-  ffi: AnyColnFfi
-  rawDoc: RawColnHandle["doc"]
-  rawChange: RawColnHandle["change"]
-}
-
-const bindingSymbol = Symbol.for("@coln-project/repo/ffi-binding")
-
-export function wrapColnHandle<Ffi extends AnyColnFfi>(
-  rawHandle: RawColnHandle,
-  ffi: Ffi,
-): ColnHandle<Ffi> {
-  const properties = rawHandle as unknown as Record<PropertyKey, unknown>
-  const existingBinding = properties[bindingSymbol] as
-    | ColnHandleBinding
-    | undefined
-
-  if (existingBinding) {
-    if (JSON.stringify(existingBinding.ffi.schema) !== JSON.stringify(ffi.schema)) {
-      throw new TypeError(
-        "Coln handle is already bound to a different FFI schema",
-      )
+  if (existingBindings) {
+    if (existingBindings !== bindings) {
+      throw new TypeError("Coln handle already uses different realm bindings")
     }
-    existingBinding.ffi = ffi
-    return rawHandle as ColnHandle<Ffi>
+    return handle as ColnHandle<Bindings>
   }
 
-  const binding: ColnHandleBinding = {
-    ffi,
-    rawDoc: rawHandle.doc.bind(rawHandle),
-    rawChange: rawHandle.change.bind(rawHandle),
-  }
+  const originalDoc = handle.doc.bind(handle)
+  const originalChange = handle.change.bind(handle)
 
-  Object.defineProperties(rawHandle, {
-    [bindingSymbol]: { value: binding },
+  Object.defineProperties(handle, {
+    [bindingsSymbol]: { value: bindings },
     doc: {
       value: () => {
-        const rawDocument = binding.rawDoc()
+        const doc = originalDoc()
         return {
-          ...rawDocument,
-          realm: new binding.ffi.View(rawDocument.store),
+          ...doc,
+          realm: new bindings.View(doc.store),
         }
       },
     },
     change: {
-      value: (
-        callback: (transaction: ColnHandleTransaction<Ffi>) => void,
-        options?: ColnChangeOptions,
-      ) => {
-        const store = binding.rawDoc().store
-        binding.rawChange(transaction => {
-          const ffiTransaction = new binding.ffi.Transaction(store, transaction)
-          for (const property of Reflect.ownKeys(ffiTransaction as object)) {
-            if (property in transaction) {
-              throw new TypeError(
-                `FFI transaction property conflicts with raw transaction: ${String(property)}`,
-              )
-            }
-            Object.defineProperty(
-              transaction,
-              property,
-              Object.getOwnPropertyDescriptor(ffiTransaction, property)!,
-            )
+      value: (callback: (transaction: ColnTransaction<Bindings>) => void) => {
+        const store = originalDoc().store
+        originalChange(transaction => {
+          if ("root" in transaction) {
+            throw new TypeError("Transaction already has a root")
           }
-          callback(transaction as ColnHandleTransaction<Ffi>)
-        }, options)
+          const { root } = new bindings.Transaction(store, transaction)
+          Object.assign(transaction, { root })
+          callback(transaction as ColnTransaction<Bindings>)
+        })
       },
     },
   })
 
-  return rawHandle as ColnHandle<Ffi>
+  return handle as ColnHandle<Bindings>
+}
+
+export function create<Bindings extends RealmBindings>(
+  repo: Repo,
+  bindings: Bindings,
+): ColnHandle<Bindings> {
+  const handle = repo.create(bindings.schema as ColnSchema, colnDocType)
+
+  return wrapColnHandle(handle, bindings)
+}
+
+export async function find<Bindings extends RealmBindings>(
+  repo: Repo,
+  url: AutomergeUrl,
+  bindings: Bindings,
+): Promise<ColnHandle<Bindings>> {
+  const handle = await repo.find(url, colnDocType)
+
+  return wrapColnHandle(handle, bindings)
 }

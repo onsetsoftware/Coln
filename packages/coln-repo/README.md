@@ -16,6 +16,9 @@ found.change(transaction => {
 })
 ```
 
+`found.doc()` returns `{ store }`, the current raw snapshot. Causal heads are
+handle metadata available through `found.heads()`.
+
 Creation requires a compiled Coln schema. Finding an existing store does not:
 the store initializes from the schema embedded in its root commit.
 
@@ -24,17 +27,21 @@ document type:
 
 ```ts
 import * as ExampleRealm from "./generated/ExampleRealm.js"
-import { wrapColnHandle } from "@coln-project/repo"
+import { create } from "@coln-project/repo"
 
-const raw = repo.create(ExampleRealm.schema, colnDocType)
-const handle = wrapColnHandle(raw, ExampleRealm)
-
-handle === raw // true
+const handle = create(repo, ExampleRealm)
 
 handle.change(transaction => {
   transaction.root.Items.add()
 })
 ```
+
+`create` uses the schema exported by the generated bindings. `RealmBindings`
+currently types that schema as `unknown`, so this package casts it to
+`ColnSchema` internally. Tightening the runtime type remains follow-up work.
+
+After wrapping, `handle.doc()` returns `{ store, realm }`. The store provides
+raw access and the realm provides the generated typed view over that store.
 
 Finding follows the same pattern: find the raw store without schema, then wrap
 the returned handle with the matching local FFI. Wrapping decorates the existing

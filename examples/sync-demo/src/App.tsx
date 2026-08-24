@@ -47,7 +47,7 @@ const SYNTHETIC_GRAPH_ID = "GraphRealm"
 
 export function App({ handle }: Props) {
   const [doc, setDoc] = useState<GraphDoc>(() => handle.doc())
-  const graph = useMemo(() => projectGraph(doc), [doc])
+  const graph = useMemo(() => projectGraph(doc, handle.heads()), [doc, handle])
   const [selectedGraphId, setSelectedGraphId] = useState<string>("")
   const [fromId, setFromId] = useState<string>("")
   const [toId, setToId] = useState<string>("")
@@ -212,7 +212,7 @@ export function App({ handle }: Props) {
   )
 }
 
-function projectGraph(doc: GraphDoc): UiGraphProjection {
+function projectGraph(doc: GraphDoc, heads: string[]): UiGraphProjection {
   const vertexRows = iteratorToArray(doc.realm.root.V.values())
   const vertices = vertexRows.map(row => ({
     id: refId(row.rowId),
@@ -228,7 +228,7 @@ function projectGraph(doc: GraphDoc): UiGraphProjection {
     edges: doc.store
       .scanTable("GraphRealm.E")
       .flatMap(row => projectEdge(row, visibleVertexIds)),
-    heads: doc.heads,
+    heads,
   }
 }
 
