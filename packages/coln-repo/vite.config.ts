@@ -3,12 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 import { defineConfig } from "vite"
-import react from "@vitejs/plugin-react"
 import wasm from "vite-plugin-wasm"
 
 export default defineConfig({
-  base: process.env.VITE_BASE || "/",
-  plugins: [wasm(), react()],
-  resolve: { dedupe: ["@coln-project/runtime"] },
+  root: "tests/browser",
+  plugins: [wasm()],
   build: { target: "esnext" },
 })

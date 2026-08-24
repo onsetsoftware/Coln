@@ -1,0 +1,121 @@
+import {
+  Repo,
+  type AutomergeUrl,
+  type CrdtDocHandle,
+} from "@automerge/automerge-repo"
+import { initSync } from "@automerge/automerge-subduction/slim"
+import { wasmBase64 } from "@automerge/automerge-subduction/wasm-base64"
+import type { RowView, Value } from "@coln-project/runtime"
+import {
+  colnDocType,
+  wrapColnHandle,
+  type ColnHandle,
+  type ColnSchema,
+} from "../../src/index.js"
+import * as itemFfi from "../fixtures/itemFfi"
+
+initSync({ module: Uint8Array.from(atob(wasmBase64), char => char.charCodeAt(0)) })
+
+type RawHandle = CrdtDocHandle<typeof colnDocType>
+type ItemHandle = ColnHandle<typeof itemFfi>
+
+const repo = new Repo({
+  subductionWebsocketEndpoints: ["ws://127.0.0.1:3031"],
+})
+let handle: RawHandle | undefined
+let typedHandle: ItemHandle | undefined
+let typedRawHandle: RawHandle | undefined
+
+const api = {
+  create(schema: ColnSchema): AutomergeUrl {
+    handle = repo.create(schema, colnDocType)
+    return handle.url
+  },
+
+  async find(url: AutomergeUrl): Promise<void> {
+    handle = await repo.find(url, colnDocType)
+  },
+
+  createTyped(): AutomergeUrl {
+    const rawHandle = repo.create(itemFfi.schema, colnDocType)
+    typedRawHandle = rawHandle
+    typedHandle = wrapColnHandle(rawHandle, itemFfi)
+    return typedHandle.url
+  },
+
+  async findTyped(url: AutomergeUrl): Promise<void> {
+    const rawHandle = await repo.find(url, colnDocType)
+    typedRawHandle = rawHandle
+    typedHandle = wrapColnHandle(rawHandle, itemFfi)
+  },
+
+  add(path: string, values: Value[]): void {
+    currentHandle().change(transaction => transaction.add(path, values))
+  },
+
+  rows(path: string): RowView[] {
+    return currentHandle().doc().store.scanTable(path)
+  },
+
+  addTyped(value: string): void {
+    currentTypedHandle().change(transaction => {
+      transaction.root.Items(stringValue(value)).add()
+    })
+  },
+
+  addRawThroughTyped(value: string): void {
+    currentTypedHandle().change(transaction => {
+      transaction.add("Test.Items", [stringValue(value)])
+    })
+  },
+
+  typedCount(value: string): number {
+    const rows = currentTypedHandle().doc().realm.root.Items(stringValue(value)).values()
+    let count = 0
+    for (let next = rows.next(); !next.done; next = rows.next()) count += 1
+    return count
+  },
+
+  typedEqualsSelf(): boolean {
+    const handle = currentTypedHandle()
+    return handle.equals(handle)
+  },
+
+  typedIsRaw(): boolean {
+    return currentTypedHandle() === typedRawHandle
+  },
+
+  heads(): string[] {
+    return currentHandle().heads()
+  },
+
+  async flush(): Promise<void> {
+    await repo.flush()
+  },
+
+  async shutdown(): Promise<void> {
+    await repo.shutdown()
+  },
+}
+
+function currentHandle(): RawHandle {
+  if (!handle) throw new Error("no Coln store is open")
+  return handle
+}
+
+function currentTypedHandle(): ItemHandle {
+  if (!typedHandle) throw new Error("no typed Coln store is open")
+  return typedHandle
+}
+
+function stringValue(value: string): Value {
+  return { tag: "string", value }
+}
+
+declare global {
+  interface Window {
+    colnTest: typeof api
+  }
+}
+
+window.colnTest = api

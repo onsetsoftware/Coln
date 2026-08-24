@@ -12,7 +12,7 @@
       rust-overlay,
       ...
     }:
-    inputs.flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-darwin" ] (
+    inputs.flake-utils.lib.eachSystem [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ] (
       system:
       let
         pkgs = import nixpkgs {
@@ -124,10 +124,14 @@
               cd "$repo_root"
 
               export CI="''${CI:-1}"
+              export COREPACK_ENABLE_PROJECT_SPEC=0
               pnpm_store_dir="''${PNPM_STORE_DIR:-$repo_root/.pnpm-store}"
 
               npm ci --prefix packages/coln-js-runtime
               npm run --prefix packages/coln-js-runtime build
+
+              pnpm --dir packages/coln-repo install --frozen-lockfile --store-dir "$pnpm_store_dir"
+              pnpm --dir packages/coln-repo build
 
               pnpm --dir examples/sync-demo install --frozen-lockfile --store-dir "$pnpm_store_dir"
               pnpm --dir examples/sync-demo build

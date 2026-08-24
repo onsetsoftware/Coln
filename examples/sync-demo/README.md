@@ -1,13 +1,11 @@
 # Coln + automerge-repo web demo
 
-This demo stores a compiler-generated Coln realm in `automerge-repo` using a
-custom document type. Custom document types aren't actually a thing in 
-`automerge-repo` (yet), so we use a vendored version of `automerge-repo` from
-the `doctypes` branch which adds support for custom document types.
+This demo stores a compiler-generated Coln realm in `automerge-repo` using
+`@coln-project/repo`. Custom document types aren't part of a released
+`automerge-repo` version yet, so both packages use the `doctypes` branch.
 
-We define a function which takes a compiled FFI bindings from compiler
-and turns it into an automerge-repo document type. This is the `colnDocType`
-function.
+`@coln-project/repo` provides typed `create` and `find` helpers that attach the
+generated realm bindings to a Coln document handle.
 
 Then, we can create and find handles containing these documents, modify and
 render them, and synchronize them using the public subduction sycn server.
@@ -26,10 +24,10 @@ The generated FFI/IR artifacts live in:
 - `src/generated/GraphRealm.json`
 
 `GraphRealm.ts` exports the generated `View`, `Transaction`, and `schema`. The
-generic `src/colnDocType.ts` consumes that compiled FFI directly:
+repo package consumes those bindings directly:
 
 ```ts
-const coln = colnDocType(GraphRealm)
+const handle = create(repo, GraphRealm)
 ```
 
 `GraphRealm.json` is passed directly to `StoreHandle.fromTheory(...)`; no local
@@ -39,20 +37,35 @@ You can compile them by running `./compile.sh`
 
 ## Run
 
-From `coln/examples/sync-demo/`:
+Build the local runtime and repo packages from the repository root, then run the
+demo:
 
 ```bash
-pnpm install
-pnpm dev
+npm ci --prefix packages/coln-js-runtime
+npm run --prefix packages/coln-js-runtime build
+pnpm --dir packages/coln-repo install
+pnpm --dir packages/coln-repo build
+pnpm --dir examples/sync-demo install
+pnpm --dir examples/sync-demo dev
 ```
 
 Open the Vite URL, then open the hash URL shown in the page in another tab. Each
 tab creates its own Repo and syncs via Subduction.
 
+To connect the terminal demo to that document:
+
+```bash
+pnpm --dir examples/sync-demo cli <automerge-url>
+```
+
+Press `v` to add a vertex, `e` to add an edge between two random vertices, `c`
+to clear the screen, or `q` to quit. Synced changes print the current vertices
+and edges.
+
 ## Build
 
 ```bash
-pnpm build
+pnpm --dir examples/sync-demo build
 ```
 
 The build script runs:
@@ -64,6 +77,6 @@ The build script runs:
 ## Test
 
 ```bash
-pnpm exec playwright install chromium # first time only
-pnpm test:e2e
+pnpm --dir examples/sync-demo exec playwright install chromium # first time only
+pnpm --dir examples/sync-demo test:e2e
 ```
