@@ -1,12 +1,7 @@
 import React from "react"
 import ReactDOM from "react-dom/client"
+import { Repo, isValidAutomergeUrl } from "@automerge/automerge-repo"
 import {
-  Repo,
-  isValidAutomergeUrl,
-  type CrdtDocHandle,
-} from "@automerge/automerge-repo"
-import {
-  colnDocType,
   create as createColn,
   find as findColn,
   type ColnHandle,
@@ -25,58 +20,18 @@ const repo = new Repo({
 })
 
 const hashUrl = location.hash.slice(1)
-const rawMode = new URLSearchParams(location.search).has("raw")
+let handle: ColnHandle<typeof GraphRealm>
 
-if (rawMode) {
-  if (!isValidAutomergeUrl(hashUrl)) {
-    throw new Error("Raw mode requires a document URL in the location hash")
-  }
-  const handle = await repo.find(hashUrl, colnDocType)
-  location.hash = handle.url
-  Object.assign(window, { repo, handle })
-  ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-    <React.StrictMode>
-      <RawApp handle={handle} />
-    </React.StrictMode>
-  )
+if (isValidAutomergeUrl(hashUrl)) {
+  handle = await findColn(repo, hashUrl, GraphRealm)
 } else {
-  let handle: ColnHandle<typeof GraphRealm>
-
-  if (isValidAutomergeUrl(hashUrl)) {
-    handle = await findColn(repo, hashUrl, GraphRealm)
-  } else {
-    handle = createColn(repo, GraphRealm)
-  }
-
-  location.hash = handle.url
-  Object.assign(window, { repo, handle })
-  ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-    <React.StrictMode>
-      <App handle={handle} />
-    </React.StrictMode>
-  )
+  handle = createColn(repo, GraphRealm)
 }
 
-function RawApp({ handle }: { handle: CrdtDocHandle<typeof colnDocType> }) {
-  const [doc, setDoc] = React.useState(() => handle.doc())
-
-  React.useEffect(() => {
-    const update = () => setDoc(handle.doc())
-    handle.on("change", update)
-    handle.on("heads-changed", update)
-    return () => {
-      handle.off("change", update)
-      handle.off("heads-changed", update)
-    }
-  }, [handle])
-
-  return (
-    <main>
-      <h1>Generic Coln store</h1>
-      <div data-testid="raw-heads-count">{handle.heads().length}</div>
-      <div data-testid="raw-vertices-count">
-        {doc.store.scanTable("GraphRealm.V").length}
-      </div>
-    </main>
-  )
-}
+location.hash = handle.url
+Object.assign(window, { repo, handle })
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+  <React.StrictMode>
+    <App handle={handle} />
+  </React.StrictMode>
+)

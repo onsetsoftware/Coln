@@ -5,8 +5,7 @@ This demo stores a compiler-generated Coln realm in `automerge-repo` using
 `automerge-repo` version yet, so both packages use the `doctypes` branch.
 
 `@coln-project/repo` provides typed `create` and `find` helpers that attach the
-generated realm bindings to a Coln document handle. Its raw `colnDocType` can
-also find and sync any Coln store without its schema or generated bindings.
+generated realm bindings to a Coln document handle.
 
 Then, we can create and find handles containing these documents, modify and
 render them, and synchronize them using the public subduction sycn server.
@@ -29,12 +28,6 @@ repo package consumes those bindings directly:
 
 ```ts
 const handle = create(repo, GraphRealm)
-```
-
-An existing store can also be loaded without knowing its schema:
-
-```ts
-const handle = await repo.find(url, colnDocType)
 ```
 
 `GraphRealm.json` is passed directly to `StoreHandle.fromTheory(...)`; no local
