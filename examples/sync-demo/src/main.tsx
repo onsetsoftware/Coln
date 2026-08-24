@@ -5,12 +5,17 @@ import {
   isValidAutomergeUrl,
   type CrdtDocHandle,
 } from "@automerge/automerge-repo"
+import {
+  colnDocType,
+  create as createColn,
+  find as findColn,
+  type ColnHandle,
+} from "@coln-project/repo"
 // @ts-ignore initSync is exported at runtime but may be missing from declarations
 import { initSync } from "@automerge/automerge-subduction/slim"
 // @ts-ignore wasm-base64 may not have declarations
 import { wasmBase64 } from "@automerge/automerge-subduction/wasm-base64"
 import { App } from "./App"
-import { colnDocType, type ColnDocType } from "./colnDocType"
 import * as GraphRealm from "./generated/GraphRealm.ts"
 
 initSync({ module: Uint8Array.from(atob(wasmBase64), c => c.charCodeAt(0)) })
@@ -26,7 +31,7 @@ if (rawMode) {
   if (!isValidAutomergeUrl(hashUrl)) {
     throw new Error("Raw mode requires a document URL in the location hash")
   }
-  const handle = await repo.find(hashUrl, colnDocType())
+  const handle = await repo.find(hashUrl, colnDocType)
   location.hash = handle.url
   Object.assign(window, { repo, handle })
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
@@ -35,14 +40,12 @@ if (rawMode) {
     </React.StrictMode>
   )
 } else {
-  type GraphDocType = ColnDocType<typeof GraphRealm>
-  const coln = colnDocType(GraphRealm)
-  let handle: CrdtDocHandle<GraphDocType>
+  let handle: ColnHandle<typeof GraphRealm>
 
   if (isValidAutomergeUrl(hashUrl)) {
-    handle = await repo.find(hashUrl, coln)
+    handle = await findColn(repo, hashUrl, GraphRealm)
   } else {
-    handle = repo.create(undefined, coln)
+    handle = createColn(repo, GraphRealm)
   }
 
   location.hash = handle.url
@@ -54,7 +57,7 @@ if (rawMode) {
   )
 }
 
-function RawApp({ handle }: { handle: CrdtDocHandle<ColnDocType> }) {
+function RawApp({ handle }: { handle: CrdtDocHandle<typeof colnDocType> }) {
   const [doc, setDoc] = React.useState(() => handle.doc())
 
   React.useEffect(() => {

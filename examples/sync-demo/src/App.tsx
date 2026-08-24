@@ -1,21 +1,15 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import type { RowRef, RowView, Value } from "@coln-project/runtime"
-import type { CrdtDocHandle } from "@automerge/automerge-repo/slim"
+import type { ColnHandle } from "@coln-project/repo"
 import * as GraphRealm from "./generated/GraphRealm.ts"
-import {
-  refId,
-  rowValue,
-  type ColnDocType,
-  type ColnDocument,
-} from "./colnDocType"
 import "./style.css"
 
-type GraphFfi = typeof GraphRealm
-type GraphDocType = ColnDocType<GraphFfi>
-type GraphDoc = ColnDocument<GraphFfi>
+type GraphHandle = ColnHandle<typeof GraphRealm>
+type GraphDoc = ReturnType<GraphHandle["doc"]>
+type RowIdValue = Extract<Value, { tag: "row_id" }>
 
 type Props = {
-  handle: CrdtDocHandle<GraphDocType>
+  handle: GraphHandle
 }
 
 type UiGraph = { id: string; ref: RowRef | null }
@@ -310,4 +304,14 @@ function vertexName(id: string, vertices: UiVertex[], fallbackIndex = -1) {
 
 function shortId(id: string) {
   return id.slice(0, 8)
+}
+
+function rowValue(ref: RowRef | null): RowIdValue {
+  if (!ref) throw new Error("cannot convert a synthetic row to a row_id value")
+  return { tag: "row_id", value: ref }
+}
+
+function refId(ref: RowRef): string {
+  if ("existing" in ref) return `${ref.existing.commit}:${ref.existing.counter}`
+  return `pending:${ref.pending.txId}:${ref.pending.counter}`
 }
