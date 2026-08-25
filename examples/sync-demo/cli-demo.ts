@@ -45,7 +45,7 @@ const dump = () => {
   lastHeads = heads
 
   const store = handle.doc().store
-  const vertices = store.scanTable("GraphRealm.V").map(row => refId(row.rowId))
+  const vertices = store.scanTable("GraphRealm.V").map(row => rowId(row.rowId))
   const vertexNames = new Map(vertices.map((id, index) => [id, `V${index + 1}`]))
   const edges = store.scanTable("GraphRealm.E").flatMap(row => {
     const from = valueRefId(row.values[0])
@@ -93,7 +93,7 @@ async function handleKey(key: string) {
 
       const [from, to] = randomPair(vertices)
       handle.change(transaction =>
-        transaction.add("GraphRealm.E", [rowValue(from.rowId), rowValue(to.rowId)]),
+        transaction.add("GraphRealm.E", [from.rowId, to.rowId]),
       )
     } else if (key === "c") {
       console.clear()
@@ -140,8 +140,9 @@ function randomPair(values: RowView[]): [RowView, RowView] {
   return [values[firstIndex], values[secondIndex]]
 }
 
-function rowValue(ref: RowRef): Value {
-  return { tag: "row_id", value: ref }
+function rowId(value: Value): string {
+  if (value.tag !== "row_id") throw new TypeError("row has a non-row ID")
+  return refId(value.value)
 }
 
 function valueRefId(value: Value | undefined): string | null {
