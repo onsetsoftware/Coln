@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Coln contributors
+//
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import assert from "node:assert/strict"
 import { afterEach, beforeEach, test } from "node:test"
 import type { Value } from "@coln-project/runtime"
@@ -84,7 +88,7 @@ test("changes sync between handles with raw ColnDocType", async () => {
       .doc()
       .store.scanTable("GraphRealm.V")
       .map(row => row.rowId),
-    [v1.value, v2.value],
+    [v1, v2],
   )
 
   assert(replica.doc().store.scanTable("GraphRealm.V").length === 2)

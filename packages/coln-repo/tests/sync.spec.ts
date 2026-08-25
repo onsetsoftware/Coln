@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Coln contributors
+//
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 // spdx-filecopyrighttext: 2026 coln contributors
 //
 // spdx-license-identifier: apache-2.0 or mit
