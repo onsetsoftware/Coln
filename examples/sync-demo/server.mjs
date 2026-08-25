@@ -87,7 +87,7 @@ function toUint8Array(data) {
 }
 
 const port = Number(process.env.PORT ?? 3030)
-const serviceName = `localhost:${port}`
+const serviceName = process.env.SUBDUCTION_SERVICE_NAME ?? `localhost:${port}`
 const subduction = new Subduction({
   signer: new MemorySigner(),
   storage: new MemoryStorage(),

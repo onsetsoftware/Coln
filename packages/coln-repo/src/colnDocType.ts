@@ -6,6 +6,8 @@ import {
 } from "@coln-project/runtime"
 import { defineDocumentType, type SedimentreeMeta } from "@automerge/automerge-repo/slim"
 
+export type { ColnSchema } from "@coln-project/runtime"
+
 export interface ColnDocument {
   store: StoreHandle
 }

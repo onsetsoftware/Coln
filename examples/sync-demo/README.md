@@ -52,6 +52,14 @@ pnpm --dir examples/sync-demo dev
 Open the Vite URL, then open the hash URL shown in the page in another tab. Each
 tab creates its own Repo and syncs via Subduction.
 
+The web and terminal demos use the public relay by default. To run both against
+the bundled local relay:
+
+```bash
+pnpm --dir examples/sync-demo dev:local
+SUBDUCTION_ENDPOINT=ws://127.0.0.1:3030 pnpm --dir examples/sync-demo cli <automerge-url>
+```
+
 To connect the terminal demo to that document:
 
 ```bash

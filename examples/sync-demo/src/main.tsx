@@ -15,8 +15,10 @@ import * as GraphRealm from "./generated/GraphRealm.ts"
 
 initSync({ module: Uint8Array.from(atob(wasmBase64), c => c.charCodeAt(0)) })
 
+const endpoint = import.meta.env.VITE_SUBDUCTION_ENDPOINT
+  ?? "wss://subduction.sync.inkandswitch.com"
 const repo = new Repo({
-  subductionWebsocketEndpoints: ["wss://subduction.sync.inkandswitch.com"],
+  subductionWebsocketEndpoints: [endpoint],
 })
 
 const hashUrl = location.hash.slice(1)

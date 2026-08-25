@@ -6,7 +6,8 @@ import {
 import { colnDocType } from "@coln-project/repo"
 import type { RowRef, RowView, Value } from "@coln-project/runtime"
 
-const endpoint = "wss://subduction.sync.inkandswitch.com"
+const endpoint = process.env.SUBDUCTION_ENDPOINT
+  ?? "wss://subduction.sync.inkandswitch.com"
 const url = process.argv[2]
 
 console.log(`Coln sync CLI
@@ -28,6 +29,7 @@ console.log(`Connecting to ${endpoint}...`)
 await initSubduction()
 
 const repo = new Repo({ subductionWebsocketEndpoints: [endpoint] })
+await waitForSubduction(repo, endpoint)
 console.log(`Loading ${url}...`)
 const handle = await repo.find(url, colnDocType)
 console.log("Store loaded. Watching for changes...")
@@ -99,6 +101,32 @@ async function handleKey(key: string) {
   } catch (error) {
     console.error(error instanceof Error ? error.message : error)
   }
+}
+
+async function waitForSubduction(repo: Repo, endpoint: string): Promise<void> {
+  if (repo.isSubductionConnected()) return
+
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      cleanup()
+      reject(new Error(`Timed out connecting to ${endpoint}`))
+    }, 10_000)
+    const connected = ({ connected }: { connected: boolean }) => {
+      if (!connected) return
+      cleanup()
+      resolve()
+    }
+    const cleanup = () => {
+      clearTimeout(timeout)
+      repo.off("subduction-connection", connected)
+    }
+
+    repo.on("subduction-connection", connected)
+    if (repo.isSubductionConnected()) {
+      cleanup()
+      resolve()
+    }
+  })
 }
 
 function randomPair(values: RowView[]): [RowView, RowView] {

@@ -3,6 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 import { expect, test, type Page } from "@playwright/test"
+import {
+  initSubduction,
+  Repo,
+  type AutomergeUrl,
+  type CrdtDocHandle,
+} from "@automerge/automerge-repo"
+import { colnDocType } from "@coln-project/repo"
 
 test("a tab opened after edits loads the coln graph", async ({ browser }) => {
   const context = await browser.newContext()
@@ -48,6 +55,45 @@ test("a tab already open on the doc receives later coln edits", async ({ browser
   await expect(bob.getByTestId("edge-item")).toHaveCount(1)
 })
 
+test("browser and CLI-equivalent repos converge across browser reload", async ({ browser }) => {
+  await initSubduction()
+  const context = await browser.newContext()
+  const nodeRepo = new Repo({
+    subductionWebsocketEndpoints: ["ws://127.0.0.1:3030"],
+  })
+
+  try {
+    const browserPage = await context.newPage()
+    await browserPage.goto("/")
+    await expect(browserPage.getByTestId("doc-url")).toHaveValue(/^automerge:/)
+
+    const url = await browserPage.getByTestId("doc-url").inputValue() as AutomergeUrl
+    const probe = await context.newPage()
+    await probe.goto(`/#${url}`)
+    await expect(probe.getByTestId("graph-item")).toHaveCount(1)
+    await probe.close()
+
+    const nodeHandle = await nodeRepo.find(url, colnDocType)
+
+    await addTwoVerticesAndEdge(browserPage)
+    await browserPage.evaluate(() => (window as any).repo.flush())
+    await expect.poll(() => vertexCount(nodeHandle)).toBe(2)
+
+    nodeHandle.change(transaction => transaction.add("GraphRealm.V", []))
+    await nodeRepo.flush()
+    nodeRepo.resyncSubduction(nodeHandle.documentId)
+    await expect(browserPage.getByTestId("vertex-item")).toHaveCount(3)
+
+    await browserPage.reload()
+    await expect(browserPage.getByTestId("doc-url")).toHaveValue(url)
+    await expect(browserPage.getByTestId("vertex-item")).toHaveCount(3)
+    await expect(browserPage.getByTestId("edge-item")).toHaveCount(1)
+  } finally {
+    await nodeRepo.shutdown()
+    await context.close()
+  }
+})
+
 async function addTwoVerticesAndEdge(page: Page) {
   await page.getByTestId("add-vertex").click()
   await page.getByTestId("add-vertex").click()
@@ -65,4 +111,8 @@ async function selectByIndex(page: Page, testId: string, index: number) {
   )
   expect(values.length).toBeGreaterThan(index)
   await page.getByTestId(testId).selectOption(values[index])
+}
+
+function vertexCount(handle: CrdtDocHandle<typeof colnDocType>) {
+  return handle.doc().store.scanTable("GraphRealm.V").length
 }

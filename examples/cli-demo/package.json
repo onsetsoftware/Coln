@@ -12,10 +12,9 @@
     "test": "node --test"
   },
   "devDependencies": {
-    "@types/node": "^26.2.0",
-    "typescript": "^7.0.2",
     "@coln-project/coln-js-runtime": "link:../../packages/coln-js-runtime",
-    "@coln-project/runtime": "link:../../packages/coln-js-runtime"
-  },
-  "packageManager": "pnpm@11.19.0"
+    "@coln-project/runtime": "link:../../packages/coln-js-runtime",
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2"
+  }
 }

@@ -2,18 +2,11 @@
   "name": "@coln-project/repo",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "license": "(Apache-2.0 OR MIT)",
   "files": [
     "dist"
   ],
-  "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit",
-    "test": "pnpm run typecheck && pnpm run test:unit && pnpm run test:e2e",
-    "test:unit": "tsx --test \"tests/**/*.test.ts\"",
-    "test:e2e": "pnpm run build && playwright test"
-  },
+  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,6 +15,13 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm run typecheck && pnpm run test:unit && pnpm run test:e2e",
+    "test:unit": "tsx --test \"tests/**/*.test.ts\"",
+    "test:e2e": "pnpm run build && playwright test"
   },
   "dependencies": {
     "@automerge/automerge-repo": "github:automerge/automerge-repo#doctypes&path:packages/automerge-repo",
@@ -37,6 +37,5 @@
     "vite": "^8.0.0",
     "vite-plugin-wasm": "^3.6.0",
     "ws": "^8.18.0"
-  },
-  "packageManager": "pnpm@11.19.0"
+  }
 }

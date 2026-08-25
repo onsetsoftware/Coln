@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "dev:local": "SUBDUCTION_SERVICE_NAME=127.0.0.1:3030 node server.mjs & relay_pid=$!; trap 'kill $relay_pid 2>/dev/null || true' EXIT INT TERM; VITE_SUBDUCTION_ENDPOINT=ws://127.0.0.1:3030 vite --host 0.0.0.0",
     "cli": "node cli-demo.ts",
     "server": "node server.mjs",
     "compile": "bash ./compile.sh",
@@ -29,6 +30,5 @@
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3"
-  },
-  "packageManager": "pnpm@11.19.0"
+  }
 }

@@ -11,21 +11,21 @@ export default defineConfig({
   fullyParallel: false,
   retries: 0,
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: "http://127.0.0.1:5175",
     trace: "retain-on-failure",
   },
   webServer: [
     {
-      command: "pnpm server",
+      command: "SUBDUCTION_SERVICE_NAME=127.0.0.1:3030 node server.mjs",
       port: 3030,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       stdout: "pipe",
       stderr: "pipe",
     },
     {
-      command: "pnpm dev -- --port 5173",
-      url: "http://127.0.0.1:5173",
-      reuseExistingServer: !process.env.CI,
+      command: "VITE_SUBDUCTION_ENDPOINT=ws://127.0.0.1:3030 ./node_modules/.bin/vite --host 127.0.0.1 --port 5175",
+      url: "http://127.0.0.1:5175",
+      reuseExistingServer: false,
       stdout: "pipe",
       stderr: "pipe",
     },
