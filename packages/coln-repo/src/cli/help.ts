@@ -50,20 +50,17 @@ Example:
   exec: `Usage: coln-repo <automerge-url> exec <script|-> [-v]
 
 Run a synchronous JavaScript script in one atomic Coln Repo change. The script
-receives a read-only pre-change store and a write-only transaction named txn.
-Use - to read the script from stdin. Successful execution writes no stdout.
+receives an add-only transaction named txn. Use - to read the script from stdin.
+Successful execution writes no stdout.
 
 Available operations:
-  store.scanTable(path)          Read rows before this change
-  store.rowById(path, rowRef)    Read one row before this change
   txn.add(path, values)          Add a row and return its tagged row reference
 
 Example:
   coln-repo automerge:... exec '
-    const vertices = store.scanTable("GraphRealm.V")
-    for (const a of vertices) {
-      for (const b of vertices) txn.add("GraphRealm.E", [a.rowId, b.rowId])
-    }
+    const a = txn.add("GraphRealm.V", [])
+    const b = txn.add("GraphRealm.V", [])
+    txn.add("GraphRealm.E", [a, b])
   '
 
 The change is committed only if the script returns synchronously without error.

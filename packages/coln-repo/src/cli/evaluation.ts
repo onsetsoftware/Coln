@@ -20,7 +20,6 @@ export function evaluateQuery(store: ReadonlyStore, source: string): unknown {
 }
 
 export function evaluateExec(
-  store: ReadonlyStore,
   transaction: ColnTransaction,
   source: string,
 ): void {
@@ -31,12 +30,11 @@ export function evaluateExec(
       return transaction.add(path, values)
     },
   })
-  const evaluate = new Function("store", "txn", `"use strict";\n${source}`) as (
-    store: ReadonlyStore,
+  const evaluate = new Function("txn", `"use strict";\n${source}`) as (
     transaction: WriteTransaction,
   ) => unknown
   try {
-    assertSynchronous(evaluate(store, exposedTransaction))
+    assertSynchronous(evaluate(exposedTransaction))
   } finally {
     active = false
   }

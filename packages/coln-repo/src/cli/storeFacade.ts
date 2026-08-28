@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-import { StoreHandle, type RowRef, type RowView } from "@coln-project/runtime"
+import type { RowRef, RowView } from "@coln-project/runtime"
 import type { ColnView } from "../colnDocType.js"
 
 export interface ReadonlyStore {
@@ -12,13 +12,7 @@ export interface ReadonlyStore {
   heads(): string[]
 }
 
-export function createStoreSnapshot(source: ColnView): ReadonlyStore {
-  const store = StoreHandle.fromTheory(source.jsonIR())
-  store.applyChunkBytes(source.commitChunksAfter(store.heads()).map(chunk => chunk.bytes))
-  return facade(store)
-}
-
-function facade(store: ColnView): ReadonlyStore {
+export function createStoreFacade(store: ColnView): ReadonlyStore {
   return Object.freeze({
     jsonIR: () => store.jsonIR(),
     scanTable: (path: string) => store.scanTable(path),

@@ -12,7 +12,7 @@ coln-repo automerge:... query 'store.scanTable("GraphRealm.V")'
 coln-repo automerge:... exec 'txn.add("GraphRealm.V", [])'
 ```
 
-`query` evaluates a synchronous JavaScript expression with a read-only `store` and prints JSON. `exec` runs a synchronous script with a pre-change, read-only `store` and a write-only `txn` in scope. An `exec` change is atomic and the CLI waits for it to flush to the sync server before exiting successfully.
+`query` evaluates a synchronous JavaScript expression with a read-only `store` and prints JSON. `exec` runs a synchronous script with an add-only `txn` in scope. An `exec` change is atomic and the CLI waits for it to flush to the sync server before exiting successfully.
 
 Pass `-` instead of JavaScript to read multiline code from stdin. Pass `-v` or `--verbose` to print connection and sync progress to stderr.
 
