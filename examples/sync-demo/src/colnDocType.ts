@@ -41,42 +41,15 @@ export type ColnDocument<Ffi extends AnyColnFfi> = {
 
 export type ColnChange<Ffi extends AnyColnFfi> = (tx: ColnFfiTransaction<Ffi>) => void
 
-export type ColnDocType<
-  Ffi extends AnyColnFfi,
-  View = ColnDocument<Ffi>,
-  Change = ColnChange<Ffi>,
-  Init = undefined,
-> = DocumentType<ColnState, View, Change, Init>
+export type ColnDocType<Ffi extends AnyColnFfi> = DocumentType<
+  ColnState,
+  ColnDocument<Ffi>,
+  ColnChange<Ffi>,
+  undefined
+>
 
-export type ColnDocTypeOptions<
-  Ffi extends AnyColnFfi,
-  View = ColnDocument<Ffi>,
-  Change = ColnChange<Ffi>,
-  Init = undefined,
-> = {
-  name?: string
-  view?: (doc: ColnDocument<Ffi>, state: ColnState) => View
-  change?: (tx: ColnFfiTransaction<Ffi>, change: Change, state: ColnState) => void
-  init?: (init: Init, tx: ColnFfiTransaction<Ffi>, state: ColnState) => void
-  hasData?: (state: ColnState) => boolean
-}
-
-export function colnDocType<
-  Ffi extends AnyColnFfi,
-  View = ColnDocument<Ffi>,
-  Change = ColnChange<Ffi>,
-  Init = undefined,
->(
-  ffi: Ffi,
-  options: ColnDocTypeOptions<Ffi, View, Change, Init> = {}
-): ColnDocType<Ffi, View, Change, Init> {
+export function colnDocType<Ffi extends AnyColnFfi>(ffi: Ffi): ColnDocType<Ffi> {
   const schemaJson = JSON.stringify(ffi.schema)
-  const projectView = options.view ?? ((doc: ColnDocument<Ffi>) => doc as unknown as View)
-  const applyChange =
-    options.change ??
-    ((tx: ColnFfiTransaction<Ffi>, change: Change) => {
-      ;(change as unknown as ColnChange<Ffi>)(tx)
-    })
 
   const makeState = (ctx: DocumentTypeContext): ColnState => ({
     store: StoreHandle.fromTheory(schemaJson),
@@ -109,23 +82,18 @@ export function colnDocType<
     }
   }
 
-  return defineDocumentType<ColnState, View, Change, Init>({
-    name: options.name ?? "coln",
+  return defineDocumentType<ColnState, ColnDocument<Ffi>, ColnChange<Ffi>, undefined>({
+    name: "coln",
     empty: ctx => makeState(ctx),
-    init: (init, ctx) => {
-      const state = makeState(ctx)
-      return options.init
-        ? runTransaction(state, tx => options.init?.(init, tx, state))
-        : state
-    },
-    view: state => projectView(makeDocument(state), state),
-    change: (state, change) =>
-      runTransaction(state, tx => applyChange(tx, change, state)),
+    init: (_init, ctx) => makeState(ctx),
+    view: makeDocument,
+    change: (state, change) => runTransaction(state, change),
     heads: state => state.store.heads(),
-    hasData: state => options.hasData?.(state) ?? state.store.heads().length > 0,
+    hasData: state => state.store.heads().length > 0,
     sedimentree: {
       metadata: state => chunks(state).map(chunkToMeta),
       materialize: (state, metas) => {
+        // TODO: Is there a way to do this below the ts level? Potential O(n^2)?
         const wanted = new Set(metas.map(meta => meta.head))
         return chunks(state)
           .filter(chunk => wanted.has(chunk.hash))
