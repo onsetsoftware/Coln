@@ -14,7 +14,7 @@ export class View implements Graph.View {
 
   constructor(store: runtime.StoreHandle) {
     this.V = new runtime.RowIdSet.View(store, "GraphRealm.V", [])
-    this.E = from => to => new runtime.RowIdSet.View(store, "GraphRealm.E", [from, to])
+    this.E = a => b => new runtime.RowIdSet.View(store, "GraphRealm.E", [a, b])
   }
 }
 
@@ -24,7 +24,7 @@ export class Transaction implements Graph.Transaction {
 
   constructor(store: runtime.StoreHandle, transaction: runtime.TransactionHandle) {
     this.V = new runtime.RowIdSet.Transaction(store, "GraphRealm.V", [], transaction)
-    this.E = from => to =>
-      new runtime.RowIdSet.Transaction(store, "GraphRealm.E", [from, to], transaction)
+    this.E = a => b =>
+      new runtime.RowIdSet.Transaction(store, "GraphRealm.E", [a, b], transaction)
   }
 }
