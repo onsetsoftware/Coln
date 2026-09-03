@@ -55,6 +55,7 @@ handle.on("change", ({ doc }) => {
 ```
 
 Documents expose `heads()`, `jsonIR()`, `rowById()`, and `scanTable()`.
+For bound handles, `root` is the generated `View` instance.
 
 ## Write
 
@@ -66,7 +67,8 @@ handle.change((tx) => {
 });
 ```
 
-Transactions expose `add(path, values)`; bound transactions also expose `root`.
+Transactions expose `add(path, values)`; bound transactions expose their generated `Transaction`
+instance as `root`.
 
 The underlying `StoreHandle` is available through `handle.fullDoc().store` for advanced use. Its lifecycle operations bypass Coln Repo changes, events, and synchronization; prefer `doc()` and `change()`.
 

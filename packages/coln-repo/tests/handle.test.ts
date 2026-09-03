@@ -8,6 +8,7 @@ import type { Value } from "@coln-project/runtime";
 import { applyBindings, colnDocType, create, find, type ColnDocument } from "../src/index";
 import * as itemFfi from "./fixtures/itemFfi";
 import schema from "./generated/GraphRealm.json" with { type: "json" };
+import type * as Graph from "./generated/Graph.js";
 import * as GraphRealm from "./generated/GraphRealm";
 import { createTestRepoPair, waitForChange, type TestRepoPair } from "./helpers/TestRepoPair";
 
@@ -29,6 +30,7 @@ test("create returns a bound, initialized handle", () => {
   assert.deepEqual(JSON.parse(document.jsonIR()), schema);
   assert.deepEqual(document.heads(), handle.rawHeads());
   assert.deepEqual(document.scanTable("GraphRealm.V"), []);
+  assert(document.root instanceof GraphRealm.View);
 });
 
 test("document can be updated and changes are reflected", () => {
@@ -37,9 +39,12 @@ test("document can be updated and changes are reflected", () => {
   let v1!: Value, v2!: Value, e1!: Value;
 
   handle.change((tx) => {
+    const view: Graph.View = tx.root;
+    assert(tx.root instanceof GraphRealm.Transaction);
     v1 = tx.root.V.add();
     v2 = tx.root.V.add();
     e1 = tx.root.E(v1)(v2).add();
+    void view;
   });
 
   const doc = handle.doc();

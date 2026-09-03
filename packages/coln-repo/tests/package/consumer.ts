@@ -3,13 +3,15 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 import type { AutomergeUrl, Repo } from "@automerge/automerge-repo"
-import type { Value } from "@coln-project/runtime"
+import type { ColnSet, StoreHandle, TransactionHandle, Value } from "@coln-project/runtime"
 import {
   colnDocType,
+  create,
   find,
   type ColnChange,
   type ColnDocument,
   type ColnHandle,
+  type ColnSchema,
   type ColnTransaction,
   type RealmBindings,
 } from "@coln-project/repo"
@@ -24,11 +26,26 @@ declare const repo: Repo
 declare const url: AutomergeUrl
 declare const bindings: RealmBindings
 declare const optionalBindings: RealmBindings | undefined
+declare const directBindings: {
+  schema: ColnSchema
+  View: new (store: StoreHandle) => { readonly Items: ColnSet.View }
+  Transaction: new (
+    store: StoreHandle,
+    transaction: TransactionHandle,
+  ) => { readonly Items: ColnSet.Transaction }
+}
 
 const raw = find(repo, url)
 const explicitUndefined = find(repo, url, undefined)
 const typed = find(repo, url, bindings)
 const optional = find(repo, url, optionalBindings)
+const created = create(repo, directBindings)
+
+created.doc().root.Items.values()
+created.change(transaction => {
+  transaction.root.Items.values()
+  transaction.root.Items.add()
+})
 
 void raw.then(handle => {
   handle.doc().scanTable("Example.Items")
@@ -55,6 +72,8 @@ void typed.then(handle => {
 })
 
 type DocumentOperation = "heads" | "jsonIR" | "rowById" | "scanTable"
+type DirectDocument = ReturnType<typeof created.doc>
+type DirectTransaction = Parameters<Parameters<typeof created.change>[0]>[0]
 
 export type TypeChecks = [
   Expect<Equal<typeof raw, Promise<ColnHandle>>>,
@@ -70,4 +89,6 @@ export type TypeChecks = [
   Expect<Equal<keyof ColnDocument<typeof bindings>, DocumentOperation | "root">>,
   Expect<Equal<keyof ColnTransaction, "add">>,
   Expect<Equal<keyof ColnTransaction<typeof bindings>, "add" | "root">>,
+  Expect<Equal<DirectDocument["root"], InstanceType<typeof directBindings.View>>>,
+  Expect<Equal<DirectTransaction["root"], InstanceType<typeof directBindings.Transaction>>>,
 ]

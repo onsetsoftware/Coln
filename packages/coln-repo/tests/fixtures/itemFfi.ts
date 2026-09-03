@@ -8,29 +8,28 @@ import {
   type TransactionHandle,
   type Value,
 } from "@coln-project/runtime"
-export { itemSchema as schema } from "./schema"
+export { itemSchema as schema } from "./schema.js"
 
-interface Root<T> {
-  Items: (value: Value) => T
+interface ViewShape {
+  readonly Items: (value: Value) => RowIdSet.View
 }
 
-export class View {
-  root: Root<RowIdSet.View>
+interface TransactionShape extends ViewShape {
+  readonly Items: (value: Value) => RowIdSet.Transaction
+}
+
+export class View implements ViewShape {
+  readonly Items: ViewShape["Items"]
 
   constructor(store: StoreHandle) {
-    this.root = {
-      Items: value => new RowIdSet.View(store, "Test.Items", [value]),
-    }
+    this.Items = value => new RowIdSet.View(store, "Test.Items", [value])
   }
 }
 
-export class Transaction extends View {
-  declare root: Root<RowIdSet.Transaction>
+export class Transaction implements TransactionShape {
+  readonly Items: TransactionShape["Items"]
 
   constructor(store: StoreHandle, transaction: TransactionHandle) {
-    super(store)
-    this.root = {
-      Items: value => new RowIdSet.Transaction(store, "Test.Items", [value], transaction),
-    }
+    this.Items = value => new RowIdSet.Transaction(store, "Test.Items", [value], transaction)
   }
 }

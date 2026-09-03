@@ -6,12 +6,17 @@ import {
   StoreHandle,
   type CommitChunk,
   type ColnSchema,
-  type RealmBindings,
   type TransactionHandle,
 } from "@coln-project/runtime"
 import { defineDocumentType, type SedimentreeMeta } from "@automerge/automerge-repo/slim"
 
-export type { ColnSchema, RealmBindings } from "@coln-project/runtime"
+export type { ColnSchema } from "@coln-project/runtime"
+
+export interface RealmBindings {
+  schema: ColnSchema
+  View: new (store: StoreHandle) => object
+  Transaction: new (store: StoreHandle, transaction: TransactionHandle) => object
+}
 
 export type ColnState = {
   store: StoreHandle
@@ -23,12 +28,12 @@ type ColnTransactionBase = Pick<TransactionHandle, "add">
 
 export type ColnDocument<Bindings extends RealmBindings | undefined = undefined> =
   Bindings extends RealmBindings
-    ? ColnDocumentBase & Pick<InstanceType<Bindings["View"]>, "root">
+    ? ColnDocumentBase & { readonly root: InstanceType<Bindings["View"]> }
     : ColnDocumentBase
 
 export type ColnTransaction<Bindings extends RealmBindings | undefined = undefined> =
   Bindings extends RealmBindings
-    ? ColnTransactionBase & Pick<InstanceType<Bindings["Transaction"]>, "root">
+    ? ColnTransactionBase & { readonly root: InstanceType<Bindings["Transaction"]> }
     : ColnTransactionBase
 
 export type ColnChange<Bindings extends RealmBindings | undefined = undefined> = (
@@ -77,7 +82,7 @@ function createDocument(state: ColnState): ColnDocumentBase {
     rowById: (path, rowId) => store.rowById(path, rowId),
     scanTable: path => store.scanTable(path),
   }
-  if (bindings) document.root = new bindings.View(store).root
+  if (bindings) document.root = new bindings.View(store)
   return Object.freeze(document)
 }
 
@@ -91,7 +96,7 @@ function createTransaction(
     // transaction recovery. Avoid duplicating the runtime schema without a clear design.
     add: (path, values) => transaction.add(path, values),
   }
-  if (bindings) exposed.root = new bindings.Transaction(store, transaction).root
+  if (bindings) exposed.root = new bindings.Transaction(store, transaction)
   return Object.freeze(exposed)
 }
 
