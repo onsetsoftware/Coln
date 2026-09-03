@@ -28,11 +28,17 @@ declare const bindings: RealmBindings
 declare const optionalBindings: RealmBindings | undefined
 declare const directBindings: {
   schema: ColnSchema
-  View: new (store: StoreHandle) => { readonly Items: ColnSet.View }
+  View: new (store: StoreHandle) => {
+    readonly root: { readonly Items: ColnSet.View }
+    viewMethod(): string
+  }
   Transaction: new (
     store: StoreHandle,
     transaction: TransactionHandle,
-  ) => { readonly Items: ColnSet.Transaction }
+  ) => {
+    readonly root: { readonly Items: ColnSet.Transaction }
+    transactionMethod(): string
+  }
 }
 
 const raw = find(repo, url)
@@ -89,6 +95,8 @@ export type TypeChecks = [
   Expect<Equal<keyof ColnDocument<typeof bindings>, DocumentOperation | "root">>,
   Expect<Equal<keyof ColnTransaction, "add">>,
   Expect<Equal<keyof ColnTransaction<typeof bindings>, "add" | "root">>,
-  Expect<Equal<DirectDocument["root"], InstanceType<typeof directBindings.View>>>,
-  Expect<Equal<DirectTransaction["root"], InstanceType<typeof directBindings.Transaction>>>,
+  Expect<Equal<DirectDocument["root"], InstanceType<typeof directBindings.View>["root"]>>,
+  Expect<Equal<DirectTransaction["root"], InstanceType<typeof directBindings.Transaction>["root"]>>,
+  Expect<DirectDocument extends InstanceType<typeof directBindings.View> ? true : false>,
+  Expect<DirectTransaction extends InstanceType<typeof directBindings.Transaction> ? true : false>,
 ]

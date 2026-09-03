@@ -8,23 +8,25 @@ import type * as Graph from "./Graph.js"
 
 export { schema }
 
-export class View implements Graph.View {
-  readonly V: Graph.View["V"]
-  readonly E: Graph.View["E"]
+export class View {
+  readonly root: Graph.View
 
   constructor(store: runtime.StoreHandle) {
-    this.V = new runtime.RowIdSet.View(store, "GraphRealm.V", [])
-    this.E = a => b => new runtime.RowIdSet.View(store, "GraphRealm.E", [a, b])
+    this.root = {
+      V: new runtime.RowIdSet.View(store, "GraphRealm.V", []),
+      E: a => b => new runtime.RowIdSet.View(store, "GraphRealm.E", [a, b]),
+    }
   }
 }
 
-export class Transaction implements Graph.Transaction {
-  readonly V: Graph.Transaction["V"]
-  readonly E: Graph.Transaction["E"]
+export class Transaction {
+  readonly root: Graph.Transaction
 
   constructor(store: runtime.StoreHandle, transaction: runtime.TransactionHandle) {
-    this.V = new runtime.RowIdSet.Transaction(store, "GraphRealm.V", [], transaction)
-    this.E = a => b =>
-      new runtime.RowIdSet.Transaction(store, "GraphRealm.E", [a, b], transaction)
+    this.root = {
+      V: new runtime.RowIdSet.Transaction(store, "GraphRealm.V", [], transaction),
+      E: a => b =>
+        new runtime.RowIdSet.Transaction(store, "GraphRealm.E", [a, b], transaction),
+    }
   }
 }

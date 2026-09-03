@@ -8,11 +8,11 @@ import type {
   DocumentType,
   Repo,
 } from "@automerge/automerge-repo";
+import type { RealmBindings } from "@coln-project/runtime";
 import {
   colnDocType,
   type ColnChange,
   type ColnDocument,
-  type RealmBindings,
   type ColnSchema,
   type ColnState,
 } from "./colnDocType.js";

@@ -30,7 +30,7 @@ test("create returns a bound, initialized handle", () => {
   assert.deepEqual(JSON.parse(document.jsonIR()), schema);
   assert.deepEqual(document.heads(), handle.rawHeads());
   assert.deepEqual(document.scanTable("GraphRealm.V"), []);
-  assert(document.root instanceof GraphRealm.View);
+  assert(document instanceof GraphRealm.View);
 });
 
 test("document can be updated and changes are reflected", () => {
@@ -40,7 +40,7 @@ test("document can be updated and changes are reflected", () => {
 
   handle.change((tx) => {
     const view: Graph.View = tx.root;
-    assert(tx.root instanceof GraphRealm.Transaction);
+    assert(tx instanceof GraphRealm.Transaction);
     v1 = tx.root.V.add();
     v2 = tx.root.V.add();
     e1 = tx.root.E(v1)(v2).add();
@@ -65,6 +65,41 @@ test("changes expose only safe Coln operations", () => {
   });
 
   assert.equal(handle.doc().scanTable("GraphRealm.V").length, 1);
+});
+
+test("bound values preserve realm prototype methods", () => {
+  class View extends GraphRealm.View {
+    realmMethod(): string {
+      return "view";
+    }
+  }
+  class Transaction extends GraphRealm.Transaction {
+    realmMethod(): string {
+      return "transaction";
+    }
+  }
+  const bindings = { ...GraphRealm, View, Transaction };
+  const handle = create(repos.source, bindings);
+
+  assert.equal(handle.doc().realmMethod(), "view");
+  handle.change(transaction => {
+    assert.equal(transaction.realmMethod(), "transaction");
+  });
+});
+
+test("binding members cannot conflict with Coln operations", () => {
+  class View extends GraphRealm.View {
+    heads(): never[] {
+      return [];
+    }
+  }
+  const bindings = { ...GraphRealm, View };
+  const handle = create(repos.source, bindings);
+
+  assert.throws(
+    () => handle.doc(),
+    new TypeError("Realm binding conflicts with Coln operation: heads"),
+  );
 });
 
 test("failed changes are aborted and leave the handle usable", () => {

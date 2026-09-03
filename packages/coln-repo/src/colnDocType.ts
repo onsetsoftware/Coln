@@ -6,17 +6,12 @@ import {
   StoreHandle,
   type CommitChunk,
   type ColnSchema,
+  type RealmBindings,
   type TransactionHandle,
 } from "@coln-project/runtime"
 import { defineDocumentType, type SedimentreeMeta } from "@automerge/automerge-repo/slim"
 
-export type { ColnSchema } from "@coln-project/runtime"
-
-export interface RealmBindings {
-  schema: ColnSchema
-  View: new (store: StoreHandle) => object
-  Transaction: new (store: StoreHandle, transaction: TransactionHandle) => object
-}
+export type { ColnSchema, RealmBindings } from "@coln-project/runtime"
 
 export type ColnState = {
   store: StoreHandle
@@ -28,12 +23,12 @@ type ColnTransactionBase = Pick<TransactionHandle, "add">
 
 export type ColnDocument<Bindings extends RealmBindings | undefined = undefined> =
   Bindings extends RealmBindings
-    ? ColnDocumentBase & { readonly root: InstanceType<Bindings["View"]> }
+    ? ColnDocumentBase & InstanceType<Bindings["View"]>
     : ColnDocumentBase
 
 export type ColnTransaction<Bindings extends RealmBindings | undefined = undefined> =
   Bindings extends RealmBindings
-    ? ColnTransactionBase & { readonly root: InstanceType<Bindings["Transaction"]> }
+    ? ColnTransactionBase & InstanceType<Bindings["Transaction"]>
     : ColnTransactionBase
 
 export type ColnChange<Bindings extends RealmBindings | undefined = undefined> = (
@@ -76,13 +71,15 @@ export const colnDocType = defineDocumentType<
 
 function createDocument(state: ColnState): ColnDocumentBase {
   const { store, bindings } = state
-  const document: ColnDocumentBase & { root?: unknown } = {
+  const operations: ColnDocumentBase = {
     heads: () => store.heads(),
     jsonIR: () => store.jsonIR(),
     rowById: (path, rowId) => store.rowById(path, rowId),
     scanTable: path => store.scanTable(path),
   }
-  if (bindings) document.root = new bindings.View(store)
+  const document = bindings
+    ? attachOperations(new bindings.View(store), operations)
+    : operations
   return Object.freeze(document)
 }
 
@@ -91,13 +88,25 @@ function createTransaction(
   transaction: TransactionHandle,
 ): ColnTransactionBase {
   const { store, bindings } = state
-  const exposed: ColnTransactionBase & { root?: unknown } = {
+  const operations: ColnTransactionBase = {
     // TODO: Validate values before WASM; invalid argument conversion can prevent
     // transaction recovery. Avoid duplicating the runtime schema without a clear design.
     add: (path, values) => transaction.add(path, values),
   }
-  if (bindings) exposed.root = new bindings.Transaction(store, transaction)
+  const exposed = bindings
+    ? attachOperations(new bindings.Transaction(store, transaction), operations)
+    : operations
   return Object.freeze(exposed)
+}
+
+function attachOperations<Instance extends object, Operations extends object>(
+  instance: Instance,
+  operations: Operations,
+): Instance & Operations {
+  for (const name of Object.keys(operations)) {
+    if (name in instance) throw new TypeError(`Realm binding conflicts with Coln operation: ${name}`)
+  }
+  return Object.assign(instance, operations)
 }
 
 function runTransaction(document: ColnState, change: ColnChange): ColnState {
