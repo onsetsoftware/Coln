@@ -71,15 +71,15 @@ export const colnDocType = defineDocumentType<
 
 function createDocument(state: ColnState): ColnDocumentBase {
   const { store, bindings } = state
-  const operations: ColnDocumentBase = {
-    heads: () => store.heads(),
-    jsonIR: () => store.jsonIR(),
-    rowById: (path, rowId) => store.rowById(path, rowId),
-    scanTable: path => store.scanTable(path),
-  }
-  const document = bindings
-    ? attachOperations(new bindings.View(store), operations)
-    : operations
+  const document = Object.assign(
+    bindings ? new bindings.View(store) : {},
+    {
+      heads: () => store.heads(),
+      jsonIR: () => store.jsonIR(),
+      rowById: (path, rowId) => store.rowById(path, rowId),
+      scanTable: path => store.scanTable(path),
+    } satisfies ColnDocumentBase,
+  )
   return Object.freeze(document)
 }
 
@@ -88,25 +88,15 @@ function createTransaction(
   transaction: TransactionHandle,
 ): ColnTransactionBase {
   const { store, bindings } = state
-  const operations: ColnTransactionBase = {
-    // TODO: Validate values before WASM; invalid argument conversion can prevent
-    // transaction recovery. Avoid duplicating the runtime schema without a clear design.
-    add: (path, values) => transaction.add(path, values),
-  }
-  const exposed = bindings
-    ? attachOperations(new bindings.Transaction(store, transaction), operations)
-    : operations
+  const exposed = Object.assign(
+    bindings ? new bindings.Transaction(store, transaction) : {},
+    {
+      // TODO: Validate values before WASM; invalid argument conversion can prevent
+      // transaction recovery. Avoid duplicating the runtime schema without a clear design.
+      add: (path, values) => transaction.add(path, values),
+    } satisfies ColnTransactionBase,
+  )
   return Object.freeze(exposed)
-}
-
-function attachOperations<Instance extends object, Operations extends object>(
-  instance: Instance,
-  operations: Operations,
-): Instance & Operations {
-  for (const name of Object.keys(operations)) {
-    if (name in instance) throw new TypeError(`Realm binding conflicts with Coln operation: ${name}`)
-  }
-  return Object.assign(instance, operations)
 }
 
 function runTransaction(document: ColnState, change: ColnChange): ColnState {

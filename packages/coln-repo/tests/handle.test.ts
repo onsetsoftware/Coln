@@ -87,21 +87,6 @@ test("bound values preserve realm prototype methods", () => {
   });
 });
 
-test("binding members cannot conflict with Coln operations", () => {
-  class View extends GraphRealm.View {
-    heads(): never[] {
-      return [];
-    }
-  }
-  const bindings = { ...GraphRealm, View };
-  const handle = create(repos.source, bindings);
-
-  assert.throws(
-    () => handle.doc(),
-    new TypeError("Realm binding conflicts with Coln operation: heads"),
-  );
-});
-
 test("failed changes are aborted and leave the handle usable", () => {
   const handle = create(repos.source, GraphRealm);
   let committed!: Value;
