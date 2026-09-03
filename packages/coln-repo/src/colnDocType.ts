@@ -87,6 +87,8 @@ function createTransaction(
 ): ColnTransactionBase {
   const { store, bindings } = state
   const exposed: ColnTransactionBase & { root?: unknown } = {
+    // TODO: Validate values before WASM; invalid argument conversion can prevent
+    // transaction recovery. Avoid duplicating the runtime schema without a clear design.
     add: (path, values) => transaction.add(path, values),
   }
   if (bindings) exposed.root = new bindings.Transaction(store, transaction).root
