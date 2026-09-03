@@ -6,12 +6,12 @@ import type * as runtime from "@coln-project/runtime"
 
 export interface View {
   readonly V: runtime.ColnSet.View
-  readonly E: (from: runtime.Value) => (to: runtime.Value) => runtime.ColnSet.View
+  readonly E: (a: runtime.Value) => (b: runtime.Value) => runtime.ColnSet.View
 }
 
 export interface Transaction extends View {
   readonly V: runtime.ColnSet.Transaction
   readonly E: (
-    from: runtime.Value,
-  ) => (to: runtime.Value) => runtime.ColnSet.Transaction
+    a: runtime.Value,
+  ) => (b: runtime.Value) => runtime.ColnSet.Transaction
 }
