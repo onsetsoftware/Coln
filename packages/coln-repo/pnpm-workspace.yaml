@@ -1,0 +1,7 @@
+allowBuilds:
+  cbor-extract: false
+  "@automerge/automerge-repo@https://codeload.github.com/automerge/automerge-repo/tar.gz/7a8dbfe020aaeb73c7146d4b2b508212d37b71f5#path:packages/automerge-repo": true
+  esbuild: true
+overrides:
+  "@automerge/automerge": 3.3.2
+  "@automerge/automerge-subduction": 0.16.1
