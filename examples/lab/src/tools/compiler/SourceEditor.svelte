@@ -13,8 +13,8 @@
   <CodeMirrorEditor
     value={handle.doc().source}
     extensions={automergeSyncPlugin({ handle, path: ["source"] })}
-    placeholderText="Define your Coln theory here…"
-    ariaLabel="Coln theory source"
+    placeholderText="Write your Coln definition here…"
+    ariaLabel="Coln definition source"
     hostClass="min-h-[420px] w-full flex-1 overflow-hidden bg-[#0b1112] min-[761px]:min-h-0"
   />
 {/key}

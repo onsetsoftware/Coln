@@ -6,10 +6,10 @@
   let { router }: { router: Router } = $props()
 
   const workbenchTools = [
-    { tool: "compiler" as const, number: "01", name: "Theory Editor", action: "Open Theory Editor", description: "Define a theory, compile its realms, and create stores from them." },
-    { tool: "editor" as const, number: "02", name: "Store Editor", action: "Open Store Editor", description: "Inspect a store’s tables, rows, and references, or query them with JavaScript." },
+    { tool: "compiler" as const, number: "01", name: "Definition Editor", action: "Open Definition Editor", description: "Write a Coln definition, compile its realms, and create stores from them." },
+    { tool: "editor" as const, number: "02", name: "Store Editor", action: "Open Store Editor", description: "Inspect a store’s tables, rows, and references, or query them with TypeScript." },
   ]
-  const graphDemo = { tool: "sync" as const, number: "03", name: "Graph Demo", action: "Open Graph Demo", description: "Explore a graph represented by tables in a Coln store, then query or change it through the embedded JavaScript REPL." }
+  const graphDemo = { tool: "sync" as const, number: "03", name: "Graph Demo", action: "Open Graph Demo", description: "Explore a graph represented by tables in a Coln store, then query or change it through the embedded TypeScript REPL." }
 </script>
 
 <section class="lab-grid-field h-full min-h-0 overflow-auto px-4 py-10 min-[761px]:px-8 min-[761px]:py-16">
@@ -17,7 +17,7 @@
     <div class="mb-10 grid gap-6 border-b border-[var(--lab-border)] pb-10 min-[761px]:grid-cols-[1fr_auto] min-[761px]:items-start">
       <div>
         <p class="m-0 font-['DM_Mono'] text-xs tracking-[.2em] text-[#a7ba69] uppercase" data-small-detail>Coln Lab</p>
-        <h1 class="mt-4 mb-3 max-w-3xl text-4xl leading-[1.05] font-semibold tracking-[-.04em] text-[#f0f1e8] min-[761px]:text-6xl">Design theories. Inspect stores. Explore <span class="text-[var(--lab-accent)]">Coln</span>.</h1>
+        <h1 class="mt-4 mb-3 max-w-3xl text-4xl leading-[1.05] font-semibold tracking-[-.04em] text-[#f0f1e8] min-[761px]:text-6xl">Write definitions. Inspect stores. Explore <span class="text-[var(--lab-accent)]">Coln</span>.</h1>
         <p class="m-0 max-w-2xl text-sm leading-7 text-[#9ba6a0] min-[761px]:text-base">Coln is a data-oriented proof assistant that treats proofs as structured, inspectable data.</p>
       </div>
       <div class="grid grid-cols-5 gap-2" aria-hidden="true">
@@ -70,5 +70,9 @@
         </div>
       </a>
     </section>
+
+    <footer class="mt-10 flex justify-end border-t border-[var(--lab-border)] pt-6">
+      <a class="font-['DM_Mono'] text-sm tracking-[.1em] text-[#8e9a94] uppercase no-underline hover:text-[#d8ff57]" href={router.href("changelog")} onclick={(event) => router.follow(event, "changelog")}>Changelog →</a>
+    </footer>
   </div>
 </section>

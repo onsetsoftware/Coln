@@ -20,13 +20,27 @@ export interface EvaluationSuccess {
 
 export interface EvaluationFailure {
   ok: false
-  phase: "syntax" | "runtime"
+  phase: "compiler" | "syntax" | "runtime"
   error: Snapshot
   console: ConsoleEntry[]
   durationMs: number
 }
 
 export type Evaluation = EvaluationSuccess | EvaluationFailure
+
+export function evaluationFailure(
+  phase: EvaluationFailure["phase"],
+  error: unknown,
+  durationMs = 0,
+): EvaluationFailure {
+  return {
+    ok: false,
+    phase,
+    error: snapshot(error),
+    console: [],
+    durationMs,
+  }
+}
 
 type AsyncProgram = (
   handle: unknown,
@@ -39,6 +53,7 @@ const AsyncFunction = Object.getPrototypeOf(async function () {})
 export async function evaluate<Bindings extends RealmBindings | undefined>(
   source: string,
   handle: ColnHandle<Bindings>,
+  sourceName = "coln-store-lab-repl.js",
 ): Promise<Evaluation> {
   const entries: ConsoleEntry[] = []
   let active = true
@@ -61,17 +76,11 @@ export async function evaluate<Bindings extends RealmBindings | undefined>(
     program = new AsyncFunction(
       "handle",
       "console",
-      `"use strict";\n${source}\n//# sourceURL=coln-store-lab-repl.js`,
+      `"use strict";\n${source}\n//# sourceURL=${sourceName}`,
     )
   } catch (error) {
     active = false
-    return {
-      ok: false,
-      phase: "syntax",
-      error: snapshot(error),
-      console: entries,
-      durationMs: performance.now() - started,
-    }
+    return { ...evaluationFailure("syntax", error, performance.now() - started), console: entries }
   }
 
   try {

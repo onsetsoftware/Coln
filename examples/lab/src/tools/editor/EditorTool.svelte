@@ -221,7 +221,7 @@
               <div class="flex flex-wrap items-center justify-end gap-2">
                 <SyncStatus status={syncStatus} compact detail={`${heads.length} ${heads.length === 1 ? "head" : "heads"}`} title={syncStatus === "error" ? syncError : endpoint} />
                 {#if theoryHref}
-                  <a class="lab-secondary-action content-center no-underline" href={theoryHref} aria-label="Return to Theory Editor" onclick={(event) => router.follow(event, "compiler", theoryUrl)}><span class="min-[1050px]:hidden">Theory</span><span class="hidden min-[1050px]:inline">Return to Theory Editor</span></a>
+                  <a class="lab-secondary-action content-center no-underline" href={theoryHref} aria-label="Return to Definition Editor" onclick={(event) => router.follow(event, "compiler", theoryUrl)}><span class="min-[1050px]:hidden">Definition</span><span class="hidden min-[1050px]:inline">Return to Definition Editor</span></a>
                 {/if}
                 <button class="lab-secondary-action" aria-label={copyLabel} onclick={copyUrl} data-testid="copy-url"><span class="min-[1050px]:hidden">{compactCopyLabel}</span><span class="hidden min-[1050px]:inline">{copyLabel}</span></button>
               </div>
@@ -230,7 +230,7 @@
           {/snippet}
         </TableBrowser>
       </Pane>
-      <LabPaneResizer label="Resize store browser and JavaScript REPL" orientation="vertical" testId="store-workspace-resizer" />
+      <LabPaneResizer label="Resize store browser and TypeScript REPL" orientation="vertical" testId="store-workspace-resizer" />
       <Pane id="store-repl-pane" class="min-h-0" defaultSize={50} minSize={30} maxSize={70}>
         <StoreRepl handle={store.handle} layoutId="coln-lab-store-repl" />
       </Pane>

@@ -29,6 +29,12 @@ describe("Coln Lab routes", () => {
     ).toMatchObject({ tool: "sync", documentUrl: "coln:graph" })
   })
 
+  it("recognises the changelog page", () => {
+    expect(
+      routeFromUrl(new URL("https://lab.example/changelog/")),
+    ).toMatchObject({ tool: "changelog", pathname: "/changelog/" })
+  })
+
   it("reports unknown instruments", () => {
     expect(routeFromUrl(new URL("https://lab.example/unknown/"))).toMatchObject(
       {

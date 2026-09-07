@@ -89,7 +89,7 @@
 
   <div class="grid content-start gap-3 overflow-auto p-4">
     {#if stores.length === 0}
-      <p class="m-0 text-sm text-[#667576]">No stores created for this theory</p>
+      <p class="m-0 text-sm text-[#667576]">No stores created for this definition</p>
     {:else}
       {#each stores as store, index}
         <article class="grid gap-2 border border-[#304041] bg-[#101718] p-3">

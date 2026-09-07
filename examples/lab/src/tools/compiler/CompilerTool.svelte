@@ -69,6 +69,9 @@
   let storeError = $state("")
   let feedback = $state("")
   let copyPending = $state(false)
+  let openDialog: HTMLDialogElement
+  let openDefinitionUrl = $state("")
+  let openDefinitionError = $state("")
   let compileTimer: ReturnType<typeof setTimeout> | undefined
   let feedbackTimer: ReturnType<typeof setTimeout> | undefined
   let removeDocumentListener: (() => void) | undefined
@@ -87,10 +90,10 @@
     status === "loading"
       ? "loading compiler"
       : status === "compiling"
-        ? "compiling theory"
+        ? "compiling definition"
         : status === "error"
           ? "compilation failed"
-          : "theory compiled",
+          : "definition compiled",
   )
   const statusColor = $derived(
     status === "error"
@@ -119,9 +122,9 @@
   )
   const createStoreHint = $derived(
     creatingStore
-      ? "Saving the store before adding it to this theory."
+      ? "Saving the store before adding it to this definition."
       : status === "compiling" || compiledSource !== theory.source
-        ? "Waiting for the current theory source to compile."
+        ? "Waiting for the current definition source to compile."
         : compilation.diagnosticsHtml.length > 0
           ? "Resolve diagnostics before creating a store."
           : realms.length > 1 && !selectedRealm
@@ -254,7 +257,7 @@
           theoryFlushError instanceof Error
             ? theoryFlushError.message
             : String(theoryFlushError)
-        storeError = `Store created, but Theory Editor could not save its link in this theory: ${detail}`
+        storeError = `Store created, but Definition Editor could not save its link in this definition: ${detail}`
       }
     } catch (cause) {
       storeError = cause instanceof Error ? cause.message : String(cause)
@@ -281,19 +284,36 @@
     feedbackTimer = setTimeout(() => (feedback = ""), 2_000)
   }
 
+  function showOpenDialog(): void {
+    openDefinitionUrl = ""
+    openDefinitionError = ""
+    openDialog.showModal()
+  }
+
+  function openDefinition(): void {
+    const url = openDefinitionUrl.trim()
+    if (!isValidAutomergeUrl(url)) {
+      openDefinitionError = "Enter a valid definition URL beginning with automerge:."
+      return
+    }
+
+    openDialog.close()
+    router.navigate("compiler", url)
+  }
+
   function isUnavailable(cause: unknown): boolean {
     return cause instanceof Error && /^Document .+ is unavailable$/.test(cause.message)
   }
 
   const errorCopy = {
-    invalid: ["INVALID THEORY URL", "This is not a valid Theory Editor document URL.", "Check the URL and try again, or create a new theory."],
-    unavailable: ["THEORY UNAVAILABLE", "This theory could not be found.", "The sync server may be unreachable, or the theory may no longer be available."],
-    incompatible: ["INCOMPATIBLE THEORY", "This document is not a supported Coln theory.", "Its structure or version is not supported by this version of Theory Editor."],
+    invalid: ["INVALID DEFINITION URL", "This is not a valid Definition Editor document URL.", "Check the URL and try again, or create a new definition."],
+    unavailable: ["DEFINITION UNAVAILABLE", "This definition could not be found.", "The sync server may be unreachable, or the definition may no longer be available."],
+    incompatible: ["INCOMPATIBLE DEFINITION", "This document is not a supported Coln definition.", "Its structure or version is not supported by this version of Definition Editor."],
   } satisfies Record<LoadError, [string, string, string]>
 </script>
 
 {#if loadError}
-  <DocumentLoadError label={errorCopy[loadError][0]} heading={errorCopy[loadError][1]} detail={errorCopy[loadError][2]} {documentUrl} errorKind={loadError} action="Create a new theory" onaction={() => router.navigate("compiler")} />
+  <DocumentLoadError label={errorCopy[loadError][0]} heading={errorCopy[loadError][1]} detail={errorCopy[loadError][2]} {documentUrl} errorKind={loadError} action="Create a new definition" onaction={() => router.navigate("compiler")} />
 {:else if handle && theoryHandle}
   {@const currentTheoryUrl = handle.url}
   <section class="lab-tool relative flex h-full min-h-0 flex-col">
@@ -303,8 +323,12 @@
        <section class="flex h-full min-h-0 flex-col border-b border-[#304041] bg-[#101718] min-[761px]:border-r min-[761px]:border-b-0">
          <div class="grid gap-3 border-b border-[#304041] px-4 py-3 min-[761px]:px-5">
            <div class="flex items-start justify-between gap-3">
-             <div><p class="m-0 font-['DM_Mono'] text-xs tracking-[.16em] text-[#748284]" data-small-detail>THEORY SOURCE</p><p class="mt-1 mb-0 text-sm text-[#91a0a1]">Source for this Coln theory</p></div>
-             <button class="lab-secondary-action shrink-0" disabled={copyPending} onclick={async () => { copyPending = true; try { await copyText(location.href, "Theory link copied") } catch (cause) { showError(cause) } finally { copyPending = false } }}>Copy theory link</button>
+              <div><p class="m-0 font-['DM_Mono'] text-xs tracking-[.16em] text-[#748284]" data-small-detail>DEFINITION SOURCE</p><p class="mt-1 mb-0 text-sm text-[#91a0a1]">Source for this Coln definition</p></div>
+              <div class="flex shrink-0 flex-wrap justify-end gap-2" aria-label="Definition actions">
+                <a class="lab-secondary-action content-center no-underline" href={router.href("compiler")} aria-label="New definition" data-testid="new-definition" onclick={(event) => router.follow(event, "compiler")}>New</a>
+                <button class="lab-secondary-action" type="button" aria-label="Open definition" onclick={showOpenDialog}>Open</button>
+                <button class="lab-secondary-action" type="button" aria-label="Copy definition link" disabled={copyPending} onclick={async () => { copyPending = true; try { await copyText(location.href, "Definition link copied") } catch (cause) { showError(cause) } finally { copyPending = false } }}>Copy link</button>
+              </div>
            </div>
            <div class="flex flex-wrap items-center justify-between gap-2 font-['DM_Mono']">
              <div class={`flex items-center gap-2 text-sm tracking-[.06em] uppercase ${statusColor}`} role="status"><span class={`size-1.5 rounded-full ${statusDot}`}></span>{statusLabel}</div>
@@ -319,11 +343,11 @@
           </div>
         </section>
       </Pane>
-      <LabPaneResizer label="Resize theory source and compilation output" orientation="vertical" testId="theory-source-resizer" />
+       <LabPaneResizer label="Resize definition source and compilation output" orientation="vertical" testId="theory-source-resizer" />
       <Pane id="theory-output-pane" class="theory-output-pane min-h-0" defaultSize={43} minSize={30} maxSize={60}>
        <section class={`grid h-full content-start gap-4 overflow-auto bg-[#131b1c] p-4 transition-opacity min-[761px]:p-6 ${status === "compiling" ? "opacity-55" : "opacity-100"}`} aria-busy={status === "compiling"}>
-           {#if error}<div class="lab-alert" role="alert">Theory Editor error: {error}</div>{/if}
-           {#if syncStatus === "error"}<div class="lab-alert" role="alert">Theory sync failed: {syncError}</div>{/if}
+            {#if error}<div class="lab-alert" role="alert">Definition Editor error: {error}</div>{/if}
+            {#if syncStatus === "error"}<div class="lab-alert" role="alert">Definition sync failed: {syncError}</div>{/if}
           <OutputPanel label="Diagnostics" index="01">{#if compilation.diagnosticsHtml.length === 0}<p class="m-0 text-[#667576]">No compilation diagnostics</p>{:else}<div class="diagnostics grid gap-4">{#each compilation.diagnosticsHtml as diagnostic}<div>{@html diagnostic}</div>{/each}</div>{/if}</OutputPanel>
          <OutputPanel label="Compiled IR" index="02">{#if compilation.prettyIr.length === 0}<p class="m-0 text-[#667576]">No compiled intermediate representation</p>{:else}<div class="grid gap-4">{#each compilation.prettyIr as realm}<pre class="m-0 whitespace-pre-wrap wrap-break-word">{realm}</pre>{/each}</div>{/if}</OutputPanel>
          <OutputPanel label="IR as JSON" index="03">{#if compilation.irJson === ""}<p class="m-0 text-[#667576]">No compiled IR JSON</p>{:else}<JsonViewer value={compilation.irJson} />{/if}</OutputPanel>
@@ -336,5 +360,23 @@
     </PaneGroup>
   </section>
 {:else}
-   <section class="lab-loading"><p>LOADING THEORY EDITOR</p></section>
+    <section class="lab-loading"><p>LOADING DEFINITION EDITOR</p></section>
 {/if}
+
+<dialog bind:this={openDialog} class="m-auto w-[calc(100%-2rem)] max-w-2xl border border-[#304041] bg-[#131b1c] p-0 text-[#edf0e7] backdrop:bg-[#080d0dcc]" aria-labelledby="open-definition-heading">
+  <form onsubmit={(event) => { event.preventDefault(); openDefinition() }}>
+    <div class="border-b border-[#304041] p-5 min-[761px]:p-7">
+      <p class="m-0 font-['DM_Mono'] text-xs tracking-[.16em] text-[#748284]" data-small-detail>DEFINITION EDITOR / OPEN DEFINITION</p>
+      <h2 id="open-definition-heading" class="mt-4 mb-2 text-2xl font-semibold tracking-[-.02em] min-[761px]:text-3xl">Open a Coln definition.</h2>
+      <p class="m-0 max-w-xl text-sm leading-relaxed text-[#91a0a1]">Enter a Definition Editor document URL to continue editing it.</p>
+    </div>
+    <div class="grid gap-3 p-5 min-[761px]:grid-cols-[1fr_auto_auto] min-[761px]:p-7">
+      <input class="h-11 min-w-0 border border-[#6b7a7b] bg-[#0b1112] px-3 font-['DM_Mono'] text-sm text-[#e8ece8] outline-none placeholder:text-[#536163] focus:border-[#d8ff57]" aria-label="Definition URL" data-testid="definition-url-input" placeholder="automerge:…" autocomplete="off" bind:value={openDefinitionUrl} oninput={() => openDefinitionError = ""} />
+      <button class="lab-secondary-action h-11" type="button" onclick={() => openDialog.close()}>Cancel</button>
+      <button class="lab-primary-action h-11 px-5 font-['DM_Mono'] text-sm font-medium tracking-[.12em] uppercase" data-testid="open-definition">Open definition</button>
+      {#if openDefinitionError}
+        <p class="lab-alert m-0 p-3 min-[761px]:col-span-3" role="alert">{openDefinitionError}</p>
+      {/if}
+    </div>
+  </form>
+</dialog>

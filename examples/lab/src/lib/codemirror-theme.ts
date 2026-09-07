@@ -68,6 +68,20 @@ export const labEditorTheme = EditorView.theme(
       backgroundColor: "#d8ff5744",
     },
     ".cm-tooltip": { border: "1px solid #304041" },
+    ".cm-tooltip-autocomplete > ul > li[aria-selected]": {
+      backgroundColor: "#d8ff57",
+      color: "#101718",
+    },
+    ".cm-typescript-hover": {
+      fontFamily: "'DM Mono', monospace",
+      fontSize: "12px",
+      margin: "0",
+      maxWidth: "min(640px, 80vw)",
+      padding: "8px 10px",
+      whiteSpace: "pre-wrap",
+    },
+    ".cm-diagnostic-error": { borderLeftColor: "#ff6b6b" },
+    ".cm-diagnostic-warning": { borderLeftColor: "#ffd166" },
   },
   { dark: true },
 )

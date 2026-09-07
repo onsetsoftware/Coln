@@ -3,7 +3,13 @@
 
 import { createSubscriber } from "svelte/reactivity"
 
-export type Tool = "home" | "compiler" | "editor" | "sync" | "not-found"
+export type Tool =
+  | "home"
+  | "changelog"
+  | "compiler"
+  | "editor"
+  | "sync"
+  | "not-found"
 
 export interface Route {
   tool: Tool
@@ -14,6 +20,7 @@ export interface Route {
 
 const paths: Record<Exclude<Tool, "not-found">, string> = {
   home: "",
+  changelog: "changelog/",
   compiler: "compiler/",
   editor: "editor/",
   sync: "sync/",
@@ -106,7 +113,10 @@ export function routeFromUrl(url: URL, basePath = "/"): Route {
       ? "not-found"
       : segment === ""
         ? "home"
-        : segment === "compiler" || segment === "editor" || segment === "sync"
+        : segment === "changelog" ||
+            segment === "compiler" ||
+            segment === "editor" ||
+            segment === "sync"
           ? segment
           : "not-found"
   const theoryUrl = url.searchParams.get("theory") ?? ""

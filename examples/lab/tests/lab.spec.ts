@@ -62,11 +62,10 @@ async function expectMinimumTextSize(
 
 test("loads every tool from its static route", async ({ page }) => {
   await page.goto("/compiler/")
-  await expect(page).toHaveTitle("Theory Editor — Coln Lab")
-  await expect(page.getByTestId("active-tool-identity")).toHaveText("Theory Editor")
+  await expect(page).toHaveTitle("Definition Editor — Coln Lab")
+  await expect(page.getByTestId("active-tool-identity")).toHaveText("Definition Editor")
   await expect(page.getByTestId("active-tool-identity")).toBeVisible()
-  await expect(page.getByTestId("active-tool-action")).toHaveAttribute("aria-label", "New theory")
-  await expect(page.getByTestId("active-tool-action")).toHaveAttribute("href", "/compiler/")
+  await expect(page.getByTestId("active-tool-action")).toHaveCount(0)
   await expect(page.locator("main > header")).toHaveCount(1)
 
   await page.goto("/editor/")
@@ -87,9 +86,49 @@ test("loads every tool from its static route", async ({ page }) => {
   await expect(page.getByTestId("active-tool-action")).toHaveAttribute("href", "/sync/")
 })
 
+test("opens the changelog from the homepage", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/")
+
+  await page.getByRole("link", { name: "Changelog" }).click()
+  await expect(page).toHaveURL(/\/changelog\/$/)
+  await expect(page).toHaveTitle("Changelog — Coln Lab")
+  await expect(page.getByRole("heading", { name: "Changelog" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Initial demo" })).toBeVisible()
+  await expect(page.getByText("September 7, 2026")).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true)
+})
+
 test("highlights the active compiler line", async ({ page }) => {
   await page.goto("/compiler/")
   await expectActiveLineHighlight(page.locator(".cm-content"))
+})
+
+test("opens an existing definition from the editor", async ({ page }) => {
+  await page.goto("/compiler/")
+  await expect(page).toHaveURL(/\/compiler\/#automerge:/)
+  const firstDefinitionUrl = page.url()
+
+  await page.getByTestId("new-definition").click()
+  await expect.poll(() => page.url()).not.toBe(firstDefinitionUrl)
+  await expect(page).toHaveURL(/\/compiler\/#automerge:/)
+
+  await page.getByRole("button", { name: "Open definition", exact: true }).click()
+  const dialog = page.getByRole("dialog", { name: "Open a Coln definition." })
+  await expect(dialog).toBeVisible()
+  await page.getByTestId("definition-url-input").fill("coln:not-a-definition")
+  await page.getByTestId("open-definition").click()
+  await expect(dialog.getByRole("alert")).toContainText("automerge:")
+
+  await page.getByTestId("definition-url-input").fill(new URL(firstDefinitionUrl).hash.slice(1))
+  await page.getByTestId("open-definition").click()
+  await expect(page).toHaveURL(firstDefinitionUrl)
+  await expect(dialog).toBeHidden()
+  await expect(page.getByText("DEFINITION SOURCE", { exact: true })).toBeVisible()
 })
 
 test("resizes and persists graph panes", async ({ page }) => {
@@ -151,7 +190,7 @@ test("uses the graph demo and moves from theories into their stores", async ({
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto("/")
   await expect(
-    page.getByRole("heading", { name: "Design theories. Inspect stores. Explore Coln." }),
+    page.getByRole("heading", { name: "Write definitions. Inspect stores. Explore Coln." }),
   ).toBeVisible()
   await expect(
     page.getByRole("navigation", { name: "Coln Lab" }),
@@ -203,7 +242,16 @@ test("uses the graph demo and moves from theories into their stores", async ({
   await page.getByRole("tab", { name: "Store REPL" }).click()
   await expect(page).toHaveURL(graphUrl)
   await expect(page.getByTestId("store-repl")).toBeVisible()
-  await expectActiveLineHighlight(page.getByTestId("repl-editor"))
+  const graphReplEditor = page.getByTestId("repl-editor")
+  await expectActiveLineHighlight(graphReplEditor)
+  await graphReplEditor.click()
+  await page.keyboard.press("ControlOrMeta+A")
+  await page.keyboard.insertText("return handle.doc().root.")
+  await page.keyboard.press("Control+Space")
+  await expect(page.locator(".cm-tooltip-autocomplete")).toContainText("V")
+  await page.keyboard.press("Escape")
+  await page.keyboard.press("ControlOrMeta+A")
+  await page.keyboard.insertText("const result: unknown = handle.doc().heads()\nreturn result")
   await expect(page.getByTestId("run-program")).toHaveText("Run Ctrl+Enter")
   await page.keyboard.press("Control+Enter")
   await expect(page.getByTestId("repl-result")).toBeVisible()
@@ -224,18 +272,18 @@ test("uses the graph demo and moves from theories into their stores", async ({
   await expect(page).toHaveURL(/\/editor\/$/)
   await expect(page.getByTestId("recent-store")).toHaveCount(0)
 
-  await labTools.getByRole("link", { name: /Theory Editor/ }).click()
+  await labTools.getByRole("link", { name: /Definition Editor/ }).click()
   await expect(page).toHaveURL(/\/compiler\/#automerge:/)
   const theoryUrl = page.url()
   const theoryDocumentUrl = new URL(theoryUrl).hash.slice(1)
-  await expect(page.getByTestId("active-tool-identity")).toHaveText("Theory Editor")
-  await expect(page.getByText("THEORY SOURCE", { exact: true })).toBeVisible()
+  await expect(page.getByTestId("active-tool-identity")).toHaveText("Definition Editor")
+  await expect(page.getByText("DEFINITION SOURCE", { exact: true })).toBeVisible()
   await expect(page.getByText("Diagnostics", { exact: true })).toBeVisible()
   await expect(page.getByTestId("theory-source-resizer")).toBeVisible()
   await expect(page.getByTestId("theory-stores-resizer")).toBeVisible()
   await expectMinimumTextSize(page)
   await page.setViewportSize({ width: 390, height: 844 })
-  await expect(page.getByTestId("active-tool-action")).toBeVisible()
+  await expect(page.getByTestId("new-definition")).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await expectMinimumTextSize(page)
   await page.setViewportSize({ width: 1280, height: 800 })
@@ -249,7 +297,7 @@ test("uses the graph demo and moves from theories into their stores", async ({
   const createStore = page.getByRole("button", { name: /Create store/ })
   await expect(createStore).toBeEnabled({ timeout: 60_000 })
   const sourcePanelBox = await page
-    .getByText("THEORY SOURCE", { exact: true })
+    .getByText("DEFINITION SOURCE", { exact: true })
     .locator("xpath=ancestor::section[1]")
     .boundingBox()
   const storesPanelBox = await page
@@ -270,7 +318,7 @@ test("uses the graph demo and moves from theories into their stores", async ({
   await expect(page.getByTestId("table-option")).toHaveCount(2)
   await expectMinimumTextSize(page)
   await page.setViewportSize({ width: 390, height: 844 })
-  await expect(page.getByRole("link", { name: "Return to Theory Editor" })).toBeVisible()
+  await expect(page.getByRole("link", { name: "Return to Definition Editor" })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await expectMinimumTextSize(page)
   await page.setViewportSize({ width: 1280, height: 800 })
@@ -280,15 +328,25 @@ test("uses the graph demo and moves from theories into their stores", async ({
   await page.keyboard.press("ArrowRight")
   expect((await storeBrowser.boundingBox())!.width).toBeGreaterThan(storeBrowserWidth)
   await expect(
-    page.getByRole("link", { name: "Return to Theory Editor", exact: true }),
+    page.getByRole("link", { name: "Return to Definition Editor", exact: true }),
   ).toBeVisible()
   const replEditor = page.getByTestId("repl-editor")
   await replEditor.click()
   await page.keyboard.press("ControlOrMeta+A")
+  await page.keyboard.insertText("return handle.doc().j")
+  await page.keyboard.press("Control+Space")
+  const storeCompletions = page.locator(".cm-tooltip-autocomplete")
+  await expect(storeCompletions.locator("li").first()).toContainText("jsonIR")
+  await expect(storeCompletions).not.toContainText("scanTable")
+  await page.keyboard.insertText("s")
+  await expect(storeCompletions).toHaveCount(0)
+  await page.keyboard.press("ControlOrMeta+A")
   await page.keyboard.insertText(`handle.change((transaction) => {
+  const marker: string = "typed"
   const from = transaction.add("GraphRealm.V", [])
   const to = transaction.add("GraphRealm.V", [])
   transaction.add("GraphRealm.E", [from, to])
+  console.log(marker)
 })
 return handle.doc().heads()`)
   await page.getByTestId("run-program").click()
@@ -318,7 +376,7 @@ return handle.doc().heads()`)
   await expect(page.getByTestId("graph-vertex")).toHaveCount(2)
   await expect(page.getByTestId("graph-edge")).toHaveCount(1)
 
-  await labTools.getByRole("link", { name: /Theory Editor/ }).click()
+  await labTools.getByRole("link", { name: /Definition Editor/ }).click()
   await expect(page).toHaveURL(theoryUrl)
   await expect(page.locator(".cm-content")).toContainText("theory Graph")
 
@@ -351,6 +409,6 @@ return handle.doc().heads()`)
   await expect(page).toHaveURL(/\/editor\/#coln:/)
   await expect(page.getByTestId("table-option")).toHaveCount(2)
   await expect(
-    page.getByRole("link", { name: "Return to Theory Editor", exact: true }),
+    page.getByRole("link", { name: "Return to Definition Editor", exact: true }),
   ).toHaveCount(0)
 })

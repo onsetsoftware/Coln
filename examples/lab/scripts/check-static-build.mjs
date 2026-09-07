@@ -12,7 +12,7 @@ const base = configuredBase.endsWith("/") ? configuredBase : `${configuredBase}/
 assert.match(index, new RegExp(`(?:src|href)=["']${escapeRegex(base)}assets/`))
 
 await Promise.all(
-  ["compiler", "editor", "sync"].map(async (route) => {
+  ["changelog", "compiler", "editor", "sync"].map(async (route) => {
     const routeIndex = await readFile(
       new URL(`${route}/index.html`, outputDirectory),
       "utf8",

@@ -3,6 +3,7 @@
 
 <script lang="ts">
   import type { Repo } from "@automerge/automerge-repo"
+  import Changelog from "./Changelog.svelte"
   import Home from "./Home.svelte"
   import { Router } from "../lib/router.svelte.ts"
   import { loadRecentStore } from "../tools/editor/recent-store.ts"
@@ -17,7 +18,9 @@
   const route = $derived(router.current)
   const pageTitle = $derived(
     route.tool === "compiler"
-      ? "Theory Editor — Coln Lab"
+      ? "Definition Editor — Coln Lab"
+      : route.tool === "changelog"
+        ? "Changelog — Coln Lab"
       : route.tool === "editor"
         ? "Store Editor — Coln Lab"
         : route.tool === "sync"
@@ -29,7 +32,7 @@
   type NavTool = "compiler" | "editor" | "sync"
   const activeTool = $derived(
     route.tool === "compiler"
-      ? { tool: "compiler" as const, label: "Theory Editor", action: "New theory", compactAction: "New" }
+      ? { tool: "compiler" as const, label: "Definition Editor", action: "New definition", compactAction: "New" }
       : route.tool === "editor"
         ? { tool: "editor" as const, label: "Store Editor", action: "Open store", compactAction: "Open" }
         : route.tool === "sync"
@@ -43,7 +46,7 @@
     {
       label: "Workbench",
       links: [
-        { tool: "compiler", label: "Theory Editor", compactLabel: "Theory", number: "01" },
+        { tool: "compiler", label: "Definition Editor", compactLabel: "Definition", number: "01" },
         { tool: "editor", label: "Store Editor", compactLabel: "Store", number: "02" },
       ],
     },
@@ -148,7 +151,9 @@
       {#if activeTool}
         <span class="hidden font-['DM_Mono'] text-sm tracking-[.12em] text-[#64716b] min-[1100px]:inline" aria-hidden="true">/</span>
         <span class="hidden truncate font-['DM_Mono'] text-sm font-medium tracking-[.1em] text-[#edf0e7] uppercase min-[1100px]:inline" data-testid="active-tool-identity">{activeTool.label}</span>
-        <a class="lab-secondary-action content-center no-underline" href={router.href(activeTool.tool)} aria-label={activeTool.action} data-testid="active-tool-action" onclick={(event) => router.follow(event, activeTool.tool)}><span class="min-[1100px]:hidden">{activeTool.compactAction}</span><span class="hidden min-[1100px]:inline">{activeTool.action}</span></a>
+        {#if activeTool.tool !== "compiler"}
+          <a class="lab-secondary-action content-center no-underline" href={router.href(activeTool.tool)} aria-label={activeTool.action} data-testid="active-tool-action" onclick={(event) => router.follow(event, activeTool.tool)}><span class="min-[1100px]:hidden">{activeTool.compactAction}</span><span class="hidden min-[1100px]:inline">{activeTool.action}</span></a>
+        {/if}
       {/if}
     </div>
     <nav class="flex h-full min-w-0 items-stretch" aria-label="Coln Lab">
@@ -166,9 +171,11 @@
   <div class="min-h-0">
     {#if route.tool === "home"}
       <Home {router} />
+    {:else if route.tool === "changelog"}
+      <Changelog {router} />
     {:else if route.tool === "compiler"}
       {#await loadCompilerTool()}
-        <div class="lab-grid-field lab-loading-label grid h-full place-items-center">OPENING THEORY EDITOR</div>
+        <div class="lab-grid-field lab-loading-label grid h-full place-items-center">OPENING DEFINITION EDITOR</div>
       {:then CompilerTool}
         {#key `compiler:${route.documentUrl}`}
           <CompilerTool {repo} {endpoint} {router} documentUrl={route.documentUrl} {trackDocument} />

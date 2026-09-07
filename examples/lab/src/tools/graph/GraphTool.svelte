@@ -30,6 +30,7 @@
   import StoreRepl from "../editor/StoreRepl.svelte"
   import StoreSummary from "../editor/StoreSummary.svelte"
   import { readTables } from "../editor/schema.ts"
+  import { graphReplTypeContext } from "./graph-repl-type-context.ts"
 
   type LoadError = "invalid" | "unavailable" | "incompatible"
   type GraphPanel = "graph" | "repl"
@@ -274,7 +275,7 @@
         </div>
 
         <div class="min-h-0 flex-1 flex-col" class:flex={activePanel === "repl"} id="graph-repl-panel" role="tabpanel" aria-labelledby="graph-repl-tab" hidden={activePanel !== "repl"}>
-          <StoreRepl {handle} active={activePanel === "repl"} compact layoutId="coln-lab-graph-repl" />
+          <StoreRepl {handle} active={activePanel === "repl"} compact layoutId="coln-lab-graph-repl" typeContext={graphReplTypeContext} />
         </div>
       </aside>
       </Pane>

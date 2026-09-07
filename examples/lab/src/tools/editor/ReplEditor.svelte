@@ -5,6 +5,8 @@
   import { javascript } from "@codemirror/lang-javascript"
   import { EditorView } from "@codemirror/view"
   import CodeMirrorEditor from "../../lib/CodeMirrorEditor.svelte"
+  import type { ReplTypeScriptClient } from "./typescript/client.ts"
+  import { typeScriptExtensions } from "./typescript/codemirror.ts"
 
   let {
     value,
@@ -12,12 +14,14 @@
     active = true,
     onchange,
     onrun,
+    typescript,
   }: {
     value: string
     disabled: boolean
     active?: boolean
     onchange: (value: string) => void
     onrun: () => void
+    typescript: ReplTypeScriptClient
   } = $props()
 
   const replEditorMetrics = EditorView.theme({
@@ -25,7 +29,11 @@
     ".cm-content": { padding: "18px 0" },
     ".cm-line": { padding: "0 18px 0 12px" },
   })
-  const extensions = [javascript(), replEditorMetrics]
+  const extensions = $derived([
+    javascript({ typescript: true }),
+    typeScriptExtensions(typescript),
+    replEditorMetrics,
+  ])
 </script>
 
 <CodeMirrorEditor
@@ -34,7 +42,7 @@
   {disabled}
   {active}
   placeholderText="Inspect with handle.doc() or change data with handle.change(txn => …)"
-  ariaLabel="Store JavaScript program"
+  ariaLabel="Store TypeScript program"
   testId="repl-editor"
   hostClass="min-h-72 flex-1 overflow-hidden bg-[#0b1112]"
   {onchange}

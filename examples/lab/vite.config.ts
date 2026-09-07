@@ -6,6 +6,7 @@ import tailwindcss from "@tailwindcss/vite"
 import { copyFile, mkdir } from "node:fs/promises"
 import { defineConfig, type Plugin } from "vite"
 import wasm from "vite-plugin-wasm"
+import { typescriptDeclarations } from "./scripts/typescript-declarations.ts"
 
 function staticToolRoutes(): Plugin {
   let outputDirectory = ""
@@ -16,7 +17,7 @@ function staticToolRoutes(): Plugin {
     },
     async closeBundle() {
       await Promise.all(
-        ["compiler", "editor", "sync"].map(async (route) => {
+        ["changelog", "compiler", "editor", "sync"].map(async (route) => {
           const directory = `${outputDirectory}/${route}`
           await mkdir(directory, { recursive: true })
           await copyFile(
@@ -31,7 +32,7 @@ function staticToolRoutes(): Plugin {
 
 export default defineConfig({
   base: process.env.VITE_BASE || "/",
-  plugins: [tailwindcss(), wasm(), svelte(), staticToolRoutes()],
+  plugins: [tailwindcss(), wasm(), svelte(), typescriptDeclarations(), staticToolRoutes()],
   resolve: {
     dedupe: [
       "svelte",
@@ -56,6 +57,7 @@ export default defineConfig({
       "json-formatter-js",
     ],
   },
+  worker: { plugins: () => [typescriptDeclarations()] },
   build: {
     emptyOutDir: true,
     outDir: "../../_build/web/lab-app",
