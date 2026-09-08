@@ -25,6 +25,7 @@
     "@codemirror/view": "^6.43.11",
     "@coln-project/repo": "link:../../packages/coln-repo",
     "@coln-project/runtime": "link:../../packages/coln-js-runtime",
+    "@replit/codemirror-vim": "^6.4.0",
     "@typescript/vfs": "^1.6.4",
     "codemirror": "^6.0.2",
     "json-formatter-js": "^2.5.23",

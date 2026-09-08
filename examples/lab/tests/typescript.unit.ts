@@ -16,6 +16,20 @@ afterEach(() => {
 })
 
 describe("REPL TypeScript service", () => {
+  it("disposes quietly while initialization is pending", async () => {
+    const unhandled: unknown[] = []
+    const onunhandled = (event: PromiseRejectionEvent) => {
+      event.preventDefault()
+      unhandled.push(event.reason)
+    }
+    window.addEventListener("unhandledrejection", onunhandled)
+    const initializingClient = new ReplTypeScriptClient(baseReplTypeContext)
+    initializingClient.dispose()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    window.removeEventListener("unhandledrejection", onunhandled)
+    expect(unhandled).toEqual([])
+  })
+
   it("uses coln-repo types for diagnostics and completion", async () => {
     client = new ReplTypeScriptClient(baseReplTypeContext)
     const source = 'const count: number = "wrong"\nreturn handle.doc().heads()'

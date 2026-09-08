@@ -3,10 +3,12 @@
 
 <script lang="ts">
   import type { Repo } from "@automerge/automerge-repo"
+  import { onMount } from "svelte"
   import Changelog from "./Changelog.svelte"
   import Home from "./Home.svelte"
   import { Router } from "../lib/router.svelte.ts"
   import { loadRecentStore } from "../tools/editor/recent-store.ts"
+  import { provideEditorPreferences } from "../lib/editor-preferences.svelte.ts"
 
   let { repo, endpoint, trackDocument }: {
     repo: Repo
@@ -15,6 +17,7 @@
   } = $props()
 
   const router = new Router()
+  const editorPreferences = provideEditorPreferences()
   const route = $derived(router.current)
   const pageTitle = $derived(
     route.tool === "compiler"
@@ -46,7 +49,7 @@
     {
       label: "Workbench",
       links: [
-        { tool: "compiler", label: "Definition Editor", compactLabel: "Definition", number: "01" },
+        { tool: "compiler", label: "Definition Editor", compactLabel: "Def", number: "01" },
         { tool: "editor", label: "Store Editor", compactLabel: "Store", number: "02" },
       ],
     },
@@ -66,6 +69,8 @@
   let compilerTool: ReturnType<typeof importCompilerTool> | undefined
   let editorTool: ReturnType<typeof importEditorTool> | undefined
   let graphTool: ReturnType<typeof importGraphTool> | undefined
+
+  onMount(() => editorPreferences.load())
 
   $effect(() => {
     if (

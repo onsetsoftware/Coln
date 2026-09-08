@@ -21,7 +21,21 @@
         <time class="font-['DM_Mono'] text-xs tracking-[.12em] text-[#a7ba69] uppercase" data-small-detail datetime="2026-09-07">September 7, 2026</time>
         <div>
           <h2 class="m-0 text-2xl font-semibold tracking-[-.03em] text-[#edf0e7]">TypeScript support</h2>
-          <p class="mt-3 mb-0 text-sm leading-7 text-[#929e98]">Added TypeScript support and autocomplete to the embedded REPL.</p>
+          <p class="mt-3 mb-0 text-sm leading-7 text-[#929e98]">Added TypeScript execution, inline diagnostics, hover information, and Coln-aware autocomplete to the embedded REPL.</p>
+        </div>
+      </li>
+      <li class="grid gap-5 border-b border-[var(--lab-border)] py-10 min-[761px]:grid-cols-[12rem_1fr]">
+        <time class="font-['DM_Mono'] text-xs tracking-[.12em] text-[#a7ba69] uppercase" data-small-detail datetime="2026-09-07">September 7, 2026</time>
+        <div>
+          <h2 class="m-0 text-2xl font-semibold tracking-[-.03em] text-[#edf0e7]">Open existing definitions</h2>
+          <p class="mt-3 mb-0 text-sm leading-7 text-[#929e98]">Definition Editor can now reopen existing definitions from an Automerge URL.</p>
+        </div>
+      </li>
+      <li class="grid gap-5 border-b border-[var(--lab-border)] py-10 min-[761px]:grid-cols-[12rem_1fr]">
+        <time class="font-['DM_Mono'] text-xs tracking-[.12em] text-[#a7ba69] uppercase" data-small-detail datetime="2026-09-07">September 7, 2026</time>
+        <div>
+          <h2 class="m-0 text-2xl font-semibold tracking-[-.03em] text-[#edf0e7]">Definition Editor</h2>
+          <p class="mt-3 mb-0 text-sm leading-7 text-[#929e98]">Renamed Theory Editor to Definition Editor to align with Coln’s terminology.</p>
         </div>
       </li>
       <li class="grid gap-5 border-b border-[var(--lab-border)] py-10 min-[761px]:grid-cols-[12rem_1fr]">

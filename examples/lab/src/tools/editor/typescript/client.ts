@@ -15,15 +15,16 @@ export class ReplTypeScriptClient {
   readonly #worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" })
   readonly #pending = new Map<number, { resolve: (value: unknown) => void; reject: (cause: Error) => void }>()
   #requestId = 0
-  #ready: Promise<unknown>
+  #ready: Promise<void>
   #contextRevision: string
+  #disposed = false
   #failure: Error | undefined
 
   constructor(context: ReplTypeContext) {
     this.#worker.addEventListener("message", this.#receive)
     this.#worker.addEventListener("error", this.#fail)
     this.#contextRevision = context.revision
-    this.#ready = this.#send({ type: "context", context: plainContext(context) })
+    this.#ready = this.#contextRequest(context)
   }
 
   async diagnostics(source: string): Promise<TypeScriptDiagnostic[]> {
@@ -48,18 +49,27 @@ export class ReplTypeScriptClient {
 
   setContext(context: ReplTypeContext): void {
     if (context.revision === this.#contextRevision) return
-    this.#ready = this.#send({ type: "context", context: plainContext(context) })
-      .then((result) => {
-        this.#contextRevision = context.revision
-        return result
-      })
+    this.#ready = this.#contextRequest(context)
   }
 
   dispose(): void {
+    if (this.#disposed) return
+    this.#disposed = true
     this.#worker.terminate()
     this.#worker.removeEventListener("message", this.#receive)
     this.#worker.removeEventListener("error", this.#fail)
-    this.#fail(new Error("TypeScript worker disposed"))
+    const error = new Error("TypeScript worker disposed")
+    error.name = "AbortError"
+    this.#fail(error)
+  }
+
+  async #contextRequest(context: ReplTypeContext): Promise<void> {
+    try {
+      await this.#send({ type: "context", context: plainContext(context) })
+      this.#contextRevision = context.revision
+    } catch (cause) {
+      this.#failure ??= asError(cause)
+    }
   }
 
   #send(request: WorkerRequestPayload): Promise<unknown> {
@@ -85,11 +95,17 @@ export class ReplTypeScriptClient {
   }
 
   #fail = (cause: Error | ErrorEvent): void => {
-    const error = cause instanceof Error ? cause : new Error(cause.message)
+    const error = asError(cause)
     this.#failure = error
     for (const pending of this.#pending.values()) pending.reject(error)
     this.#pending.clear()
   }
+}
+
+function asError(cause: unknown): Error {
+  if (cause instanceof Error) return cause
+  if (cause instanceof ErrorEvent) return new Error(cause.message)
+  return new Error(String(cause))
 }
 
 function plainContext(context: ReplTypeContext): ReplTypeContext {

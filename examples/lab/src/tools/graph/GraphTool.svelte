@@ -31,9 +31,9 @@
   import StoreSummary from "../editor/StoreSummary.svelte"
   import { readTables } from "../editor/schema.ts"
   import { graphReplTypeContext } from "./graph-repl-type-context.ts"
+  import { loadGraphPanel, saveGraphPanel, type GraphPanel } from "./panel-storage.ts"
 
   type LoadError = "invalid" | "unavailable" | "incompatible"
-  type GraphPanel = "graph" | "repl"
 
   let { repo, endpoint, router, documentUrl, trackDocument }: {
     repo: Repo
@@ -61,7 +61,7 @@
   let feedbackId = 0
   let feedbackTimeout: ReturnType<typeof setTimeout> | undefined
   let destroyed = false
-  let activePanel = $state<GraphPanel>("graph")
+  let activePanel = $state<GraphPanel>(loadGraphPanel())
 
   const colnHandle = $derived(handle ? new ColnHandle(handle) : undefined)
   const sync = $derived(handle ? new DocumentSync(repo, handle) : undefined)
@@ -186,6 +186,7 @@
 
   function selectPanel(panel: GraphPanel, focus = false) {
     activePanel = panel
+    saveGraphPanel(panel)
     if (focus) requestAnimationFrame(() => document.getElementById(`graph-${panel}-tab`)?.focus())
   }
 
