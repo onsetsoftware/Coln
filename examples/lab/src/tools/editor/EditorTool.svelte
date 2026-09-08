@@ -49,7 +49,6 @@
   let loadError = $state("")
   let selectedTableName = $state("")
   let selectedRowId = $state("")
-  let referenceNavigation = $state(0)
   let copyLabel = $state("Copy store URL")
   let actionError = $state("")
   let operation = 0
@@ -174,7 +173,6 @@
 
     selectedRowId = displayRowRef(reference).full
     selectedTableName = tableName
-    referenceNavigation += 1
   }
 
   async function copyUrl(): Promise<void> {
@@ -211,7 +209,6 @@
           selected={selectedTable}
           {rows}
           {selectedRowId}
-          {referenceNavigation}
           onselect={selectTable}
           canfollow={canFollowReference}
           onfollow={followReference}

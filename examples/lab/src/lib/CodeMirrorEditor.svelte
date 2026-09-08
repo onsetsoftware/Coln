@@ -7,15 +7,14 @@
   import { Compartment, Prec, type Extension } from "@codemirror/state"
   import { EditorView, keymap, placeholder, showPanel } from "@codemirror/view"
   import { basicSetup } from "codemirror"
-  import { onMount } from "svelte"
+  import { onMount, untrack } from "svelte"
   import { labEditorTheme } from "./codemirror-theme.ts"
   import { useEditorPreferences } from "./editor-preferences.svelte.ts"
 
   let {
-    value,
+    initialValue,
     extensions,
     disabled = false,
-    active = true,
     placeholderText,
     ariaLabel,
     testId,
@@ -23,10 +22,9 @@
     onchange,
     onrun,
   }: {
-    value: string
+    initialValue: string
     extensions?: Extension
     disabled?: boolean
-    active?: boolean
     placeholderText: string
     ariaLabel: string
     testId?: string
@@ -102,19 +100,9 @@
     view?.dispatch({ effects: editable.reconfigure(EditorView.editable.of(!disabled)) })
   })
 
-  $effect(() => {
-    if (view && value !== view.state.doc.toString()) {
-      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value } })
-    }
-  })
-
-  $effect(() => {
-    if (active) requestAnimationFrame(() => view?.requestMeasure())
-  })
-
   onMount(() => {
     view = new EditorView({
-      doc: value,
+      doc: untrack(() => initialValue),
       parent: host,
       extensions: [
         vimMode.of(editorPreferences.vimEnabled ? vimExtension() : []),

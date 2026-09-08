@@ -7,15 +7,7 @@ const contextKey = Symbol("editor-preferences")
 const storageKey = "coln-lab:vim-enabled"
 
 export class EditorPreferences {
-  vimEnabled = $state(false)
-
-  load(): void {
-    try {
-      this.vimEnabled = localStorage.getItem(storageKey) === "true"
-    } catch {
-      this.vimEnabled = false
-    }
-  }
+  vimEnabled = $state(readVimEnabled())
 
   setVimEnabled(enabled: boolean): void {
     this.vimEnabled = enabled
@@ -24,6 +16,14 @@ export class EditorPreferences {
     } catch {
       // Vim remains available for the current session when storage is unavailable.
     }
+  }
+}
+
+function readVimEnabled(): boolean {
+  try {
+    return localStorage.getItem(storageKey) === "true"
+  } catch {
+    return false
   }
 }
 

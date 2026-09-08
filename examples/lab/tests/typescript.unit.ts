@@ -80,4 +80,15 @@ describe("REPL TypeScript service", () => {
     const baseCompletions = await client.completions(source, source.length)
     expect(baseCompletions).toEqual([])
   })
+
+  it("applies the latest context when revisions change rapidly", async () => {
+    client = new ReplTypeScriptClient(baseReplTypeContext)
+    await client.diagnostics("")
+
+    client.setContext(graphReplTypeContext)
+    client.setContext(baseReplTypeContext)
+
+    const source = "return handle.doc().root."
+    await expect(client.completions(source, source.length)).resolves.toEqual([])
+  })
 })

@@ -53,13 +53,19 @@
     prettyIr: [],
     irJson: "",
   }
+  const statusDetails = {
+    loading: { label: "loading compiler", color: "text-[#91a0a1]", dot: "bg-[#819091]" },
+    compiling: { label: "compiling definition", color: "text-[#91a0a1]", dot: "bg-[#819091]" },
+    error: { label: "compilation failed", color: "text-[#ff9a86]", dot: "bg-[#ff7657]" },
+    ready: { label: "definition compiled", color: "text-[#d8ff57]", dot: "bg-[#d8ff57] shadow-[0_0_12px_#d8ff5788]" },
+  }
 
   let handle = $state<TheoryDocumentHandle>()
   let theoryHandle = $state<TheoryHandle>()
   let sync = $state<DocumentSync>()
   let loadError = $state<LoadError>()
   let compilation = $state<Compilation>(emptyCompilation)
-  let status = $state<"loading" | "ready" | "compiling" | "error">("loading")
+  let status = $state<keyof typeof statusDetails>("loading")
   let error = $state("")
   let compiler = $state<Compiler>()
   let compiledSource = $state("")
@@ -86,29 +92,7 @@
   const sourceLines = $derived(
     theory.source === "" ? 0 : theory.source.split("\n").length,
   )
-  const statusLabel = $derived(
-    status === "loading"
-      ? "loading compiler"
-      : status === "compiling"
-        ? "compiling definition"
-        : status === "error"
-          ? "compilation failed"
-          : "definition compiled",
-  )
-  const statusColor = $derived(
-    status === "error"
-      ? "text-[#ff9a86]"
-      : status === "ready"
-        ? "text-[#d8ff57]"
-        : "text-[#91a0a1]",
-  )
-  const statusDot = $derived(
-    status === "error"
-      ? "bg-[#ff7657]"
-      : status === "ready"
-        ? "bg-[#d8ff57] shadow-[0_0_12px_#d8ff5788]"
-        : "bg-[#819091]",
-  )
+  const statusDetail = $derived(statusDetails[status])
   const selectedRealm = $derived(
     realms.find((realm) => realm.name === selectedRealmName),
   )
@@ -306,14 +290,14 @@
   }
 
   const errorCopy = {
-    invalid: ["INVALID DEFINITION URL", "This is not a valid Definition Editor document URL.", "Check the URL and try again, or create a new definition."],
-    unavailable: ["DEFINITION UNAVAILABLE", "This definition could not be found.", "The sync server may be unreachable, or the definition may no longer be available."],
-    incompatible: ["INCOMPATIBLE DEFINITION", "This document is not a supported Coln definition.", "Its structure or version is not supported by this version of Definition Editor."],
-  } satisfies Record<LoadError, [string, string, string]>
+    invalid: { label: "INVALID DEFINITION URL", heading: "This is not a valid Definition Editor document URL.", detail: "Check the URL and try again, or create a new definition." },
+    unavailable: { label: "DEFINITION UNAVAILABLE", heading: "This definition could not be found.", detail: "The sync server may be unreachable, or the definition may no longer be available." },
+    incompatible: { label: "INCOMPATIBLE DEFINITION", heading: "This document is not a supported Coln definition.", detail: "Its structure or version is not supported by this version of Definition Editor." },
+  } satisfies Record<LoadError, { label: string; heading: string; detail: string }>
 </script>
 
 {#if loadError}
-  <DocumentLoadError label={errorCopy[loadError][0]} heading={errorCopy[loadError][1]} detail={errorCopy[loadError][2]} {documentUrl} errorKind={loadError} action="Create a new definition" onaction={() => router.navigate("compiler")} />
+  <DocumentLoadError label={errorCopy[loadError].label} heading={errorCopy[loadError].heading} detail={errorCopy[loadError].detail} {documentUrl} errorKind={loadError} action="Create a new definition" onaction={() => router.navigate("compiler")} />
 {:else if handle && theoryHandle}
   {@const currentTheoryUrl = handle.url}
   <section class="lab-tool relative flex h-full min-h-0 flex-col">
@@ -331,7 +315,7 @@
               </div>
            </div>
            <div class="flex flex-wrap items-center justify-between gap-2 font-['DM_Mono']">
-             <div class={`flex items-center gap-2 text-sm tracking-[.06em] uppercase ${statusColor}`} role="status"><span class={`size-1.5 rounded-full ${statusDot}`}></span>{statusLabel}</div>
+              <div class={`flex items-center gap-2 text-sm tracking-[.06em] uppercase ${statusDetail.color}`} role="status"><span class={`size-1.5 rounded-full ${statusDetail.dot}`}></span>{statusDetail.label}</div>
              <SyncStatus status={syncStatus} compact detail={`${sourceLines} ${sourceLines === 1 ? "line" : "lines"}`} title={syncStatus === "error" ? syncError : endpoint} />
            </div>
          </div>

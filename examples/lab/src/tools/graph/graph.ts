@@ -60,21 +60,6 @@ export function addEdge(
   })
 }
 
-export function watchGraph(
-  handle: GraphHandle,
-  update: (graph: Graph) => void,
-): () => void {
-  const refresh = () => update(readGraph(handle.doc()))
-  handle.on("change", refresh)
-  handle.on("heads-changed", refresh)
-  refresh()
-
-  return () => {
-    handle.off("change", refresh)
-    handle.off("heads-changed", refresh)
-  }
-}
-
 function projectEdge(row: RowView, vertexIds: Set<string>): Edge[] {
   const from = valueRef(row.values[0])
   const to = valueRef(row.values[1])

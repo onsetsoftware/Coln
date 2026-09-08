@@ -12,7 +12,6 @@
     selected,
     rows,
     selectedRowId,
-    referenceNavigation,
     onselect,
     canfollow,
     onfollow,
@@ -22,7 +21,6 @@
     selected: StoreTable | undefined
     rows: RowView[]
     selectedRowId: string
-    referenceNavigation: number
     onselect: (name: string) => void
     canfollow: (tableName: string | undefined, value: Value) => boolean
     onfollow: (tableName: string | undefined, value: Value) => void
@@ -35,19 +33,14 @@
     tables.filter((table) => table.name.toLowerCase().includes(filter.toLowerCase())),
   )
 
-  $effect(() => {
-    const navigation = referenceNavigation
-    const target = selectedRowId
-    if (!target) return
+  async function followReference(tableName: string | undefined, value: Value): Promise<void> {
+    onfollow(tableName, value)
     filter = ""
-
-    void tick().then(() => {
-      if (navigation !== referenceNavigation || target !== selectedRowId) return
-      const row = grid?.querySelector<HTMLElement>('[data-selected="true"]')
-      row?.scrollIntoView({ block: "nearest", inline: "nearest" })
-      row?.focus()
-    })
-  })
+    await tick()
+    const row = grid?.querySelector<HTMLElement>('[data-selected="true"]')
+    row?.scrollIntoView({ block: "nearest", inline: "nearest" })
+    row?.focus()
+  }
 </script>
 
 <section class="flex h-full min-h-0 flex-col border-b border-[#304041] bg-[#101718] min-[761px]:border-r min-[761px]:border-b-0">
@@ -118,7 +111,7 @@
                         class="block max-w-full cursor-pointer overflow-hidden border-0 bg-transparent p-0 font-inherit text-inherit underline decoration-[#44678c] underline-offset-2 hover:text-[#d8ff57] focus-visible:text-[#d8ff57] focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff57]"
                         aria-label={`Open referenced row ${displayed.full}`}
                         data-testid="table-reference"
-                        onclick={() => onfollow(selected.columns[index]?.referenceTable, value)}
+                        onclick={() => void followReference(selected.columns[index]?.referenceTable, value)}
                       >
                         <span class="block overflow-hidden text-ellipsis whitespace-nowrap">{displayed.compact}</span>
                       </button>

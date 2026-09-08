@@ -26,7 +26,7 @@ const openedDocuments = new Set<DocumentId>()
 const trackDocument = (documentId: string) =>
   openedDocuments.add(documentId as DocumentId)
 const flush = () => {
-  if (openedDocuments.size > 0) void repo.flush([...openedDocuments])
+  if (openedDocuments.size > 0) void repo.flush([...openedDocuments]).catch(() => {})
 }
 
 addEventListener("pagehide", flush)

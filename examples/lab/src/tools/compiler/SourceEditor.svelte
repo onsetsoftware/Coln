@@ -11,7 +11,7 @@
 
 {#key handle}
   <CodeMirrorEditor
-    value={handle.doc().source}
+    initialValue={handle.doc().source}
     extensions={automergeSyncPlugin({ handle, path: ["source"] })}
     placeholderText="Write your Coln definition here…"
     ariaLabel="Coln definition source"

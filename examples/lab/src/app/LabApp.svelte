@@ -3,7 +3,6 @@
 
 <script lang="ts">
   import type { Repo } from "@automerge/automerge-repo"
-  import { onMount } from "svelte"
   import Changelog from "./Changelog.svelte"
   import Home from "./Home.svelte"
   import { Router } from "../lib/router.svelte.ts"
@@ -17,49 +16,44 @@
   } = $props()
 
   const router = new Router()
-  const editorPreferences = provideEditorPreferences()
+  provideEditorPreferences()
   const route = $derived(router.current)
-  const pageTitle = $derived(
-    route.tool === "compiler"
-      ? "Definition Editor — Coln Lab"
-      : route.tool === "changelog"
-        ? "Changelog — Coln Lab"
-      : route.tool === "editor"
-        ? "Store Editor — Coln Lab"
-        : route.tool === "sync"
-          ? "Graph Demo — Coln Lab"
-          : route.tool === "not-found"
-            ? "Page not found — Coln Lab"
-            : "Coln Lab",
-  )
   type NavTool = "compiler" | "editor" | "sync"
-  const activeTool = $derived(
-    route.tool === "compiler"
-      ? { tool: "compiler" as const, label: "Definition Editor", action: "New definition", compactAction: "New" }
-      : route.tool === "editor"
-        ? { tool: "editor" as const, label: "Store Editor", action: "Open store", compactAction: "Open" }
-        : route.tool === "sync"
-          ? { tool: "sync" as const, label: "Graph Demo", action: "New graph", compactAction: "New" }
-          : undefined,
-  )
-  const navigationGroups: Array<{
+  const tools = {
+    compiler: { label: "Definition Editor", compactLabel: "Def", number: "01", action: "New definition", compactAction: "New" },
+    editor: { label: "Store Editor", compactLabel: "Store", number: "02", action: "Open store", compactAction: "Open" },
+    sync: { label: "Graph Demo", compactLabel: "Graph", number: "03", action: "New graph", compactAction: "New" },
+  } satisfies Record<NavTool, {
     label: string
-    links: Array<{ tool: NavTool; label: string; compactLabel: string; number: string }>
-  }> = [
+    compactLabel: string
+    number: string
+    action: string
+    compactAction: string
+  }>
+  const navigationGroups: Array<{ label: string; tools: NavTool[] }> = [
     {
       label: "Workbench",
-      links: [
-        { tool: "compiler", label: "Definition Editor", compactLabel: "Def", number: "01" },
-        { tool: "editor", label: "Store Editor", compactLabel: "Store", number: "02" },
-      ],
+      tools: ["compiler", "editor"],
     },
     {
       label: "Demos",
-      links: [
-        { tool: "sync", label: "Graph Demo", compactLabel: "Graph", number: "03" },
-      ],
+      tools: ["sync"],
     },
   ]
+  const activeTool = $derived(
+    route.tool === "compiler" || route.tool === "editor" || route.tool === "sync"
+      ? { tool: route.tool, ...tools[route.tool] }
+      : undefined,
+  )
+  const pageTitle = $derived(
+    activeTool
+      ? `${activeTool.label} — Coln Lab`
+      : route.tool === "changelog"
+        ? "Changelog — Coln Lab"
+        : route.tool === "not-found"
+          ? "Page not found — Coln Lab"
+          : "Coln Lab",
+  )
   const openDocuments = $state({
     compiler: { documentUrl: "", theoryUrl: "" },
     sync: { documentUrl: "", theoryUrl: "" },
@@ -69,8 +63,6 @@
   let compilerTool: ReturnType<typeof importCompilerTool> | undefined
   let editorTool: ReturnType<typeof importEditorTool> | undefined
   let graphTool: ReturnType<typeof importGraphTool> | undefined
-
-  onMount(() => editorPreferences.load())
 
   $effect(() => {
     if (
@@ -165,8 +157,9 @@
       {#each navigationGroups as group, groupIndex}
         <div class={`relative flex h-full items-stretch ${groupIndex > 0 ? "ml-1 border-l-2 border-[#52605a] min-[1100px]:ml-4" : ""}`} role="group" aria-label={group.label}>
           <span class="pointer-events-none absolute top-3 left-3 z-1 hidden font-['DM_Mono'] text-xs leading-none tracking-[.12em] text-[#64716b] uppercase min-[1100px]:block" data-small-detail>{group.label}</span>
-          {#each group.links as link}
-            <a class={`flex min-w-16 items-center justify-center border-l border-[#29332f] px-2 font-['DM_Mono'] text-sm tracking-[.08em] uppercase no-underline min-[560px]:min-w-24 min-[560px]:px-3 min-[760px]:min-w-32 min-[1100px]:min-w-36 min-[1100px]:items-end min-[1100px]:pb-2.5 ${route.tool === link.tool ? "bg-[#d8ff57] text-[#111816]" : "text-[#8e9a94] hover:text-[#d8ff57]"}`} href={toolHref(link.tool)} aria-label={link.label} aria-current={route.tool === link.tool ? "page" : undefined} onclick={(event) => selectTool(event, link.tool)}><span><span class="mr-1 hidden text-xs opacity-55 min-[1100px]:inline" data-small-detail aria-hidden="true">{link.number}</span><span class="min-[760px]:hidden">{link.compactLabel}</span><span class="hidden min-[760px]:inline">{link.label}</span></span></a>
+          {#each group.tools as tool}
+            {@const link = tools[tool]}
+            <a class={`flex min-w-16 items-center justify-center border-l border-[#29332f] px-2 font-['DM_Mono'] text-sm tracking-[.08em] uppercase no-underline min-[560px]:min-w-24 min-[560px]:px-3 min-[760px]:min-w-32 min-[1100px]:min-w-36 min-[1100px]:items-end min-[1100px]:pb-2.5 ${route.tool === tool ? "bg-[#d8ff57] text-[#111816]" : "text-[#8e9a94] hover:text-[#d8ff57]"}`} href={toolHref(tool)} aria-label={link.label} aria-current={route.tool === tool ? "page" : undefined} onclick={(event) => selectTool(event, tool)}><span><span class="mr-1 hidden text-xs opacity-55 min-[1100px]:inline" data-small-detail aria-hidden="true">{link.number}</span><span class="min-[760px]:hidden">{link.compactLabel}</span><span class="hidden min-[760px]:inline">{link.label}</span></span></a>
           {/each}
         </div>
       {/each}

@@ -276,7 +276,7 @@
         </div>
 
         <div class="min-h-0 flex-1 flex-col" class:flex={activePanel === "repl"} id="graph-repl-panel" role="tabpanel" aria-labelledby="graph-repl-tab" hidden={activePanel !== "repl"}>
-          <StoreRepl {handle} active={activePanel === "repl"} compact layoutId="coln-lab-graph-repl" typeContext={graphReplTypeContext} />
+          <StoreRepl {handle} active={activePanel === "repl"} compact layoutId="coln-lab-graph-repl" initialTypeContext={graphReplTypeContext} />
         </div>
       </aside>
       </Pane>

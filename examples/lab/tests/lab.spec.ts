@@ -4,7 +4,7 @@
 import { expect, test, type Locator } from "@playwright/test"
 
 async function expectActiveLineHighlight(editor: Locator): Promise<void> {
-  await editor.click()
+  await editor.click({ position: { x: 16, y: 16 } })
   const activeLine = editor.locator(".cm-activeLine")
   await expect(activeLine).toBeVisible()
   expect(await activeLine.evaluate((element) => getComputedStyle(element).backgroundColor))
@@ -95,7 +95,7 @@ test("opens the changelog from the homepage", async ({ page }) => {
   await expect(page).toHaveTitle("Changelog — Coln Lab")
   await expect(page.getByRole("heading", { name: "Changelog" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "Initial demo" })).toBeVisible()
-  await expect(page.getByText("September 7, 2026")).toBeVisible()
+  await expect(page.getByText("September 7, 2026").first()).toBeVisible()
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

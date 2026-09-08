@@ -9,16 +9,14 @@
   import { typeScriptExtensions } from "./typescript/codemirror.ts"
 
   let {
-    value,
+    initialValue,
     disabled,
-    active = true,
     onchange,
     onrun,
     typescript,
   }: {
-    value: string
+    initialValue: string
     disabled: boolean
-    active?: boolean
     onchange: (value: string) => void
     onrun: () => void
     typescript: ReplTypeScriptClient
@@ -37,10 +35,9 @@
 </script>
 
 <CodeMirrorEditor
-  {value}
+  {initialValue}
   {extensions}
   {disabled}
-  {active}
   placeholderText="Inspect with handle.doc() or change data with handle.change(txn => …)"
   ariaLabel="Store TypeScript program"
   testId="repl-editor"

@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
 
 <script lang="ts">
-  import { onMount } from "svelte"
+  import { untrack } from "svelte"
 
   let { initialUrl, recentUrl, loading, error, onload }: {
     initialUrl: string
@@ -12,11 +12,7 @@
     onload: (url: string) => void
   } = $props()
 
-  let documentUrl = $state("")
-
-  onMount(() => {
-    documentUrl = initialUrl
-  })
+  let documentUrl = $state(untrack(() => initialUrl))
 
   function displayUrl(url: string): string {
     return url.length > 48 ? `${url.slice(0, 34)}...${url.slice(-10)}` : url

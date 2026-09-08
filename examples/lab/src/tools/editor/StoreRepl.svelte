@@ -4,38 +4,32 @@
 <script lang="ts" generics="Bindings extends RealmBindings | undefined">
   import type { ColnHandle, RealmBindings } from "@coln-project/repo"
   import { Pane, PaneGroup } from "paneforge"
-  import { onDestroy, onMount } from "svelte"
+  import { onDestroy, untrack } from "svelte"
   import LabPaneResizer from "../../lib/LabPaneResizer.svelte"
   import ReplEditor from "./ReplEditor.svelte"
   import ReplOutput from "./ReplOutput.svelte"
   import { evaluate, evaluationFailure, type Evaluation } from "./evaluate.ts"
-  import { loadSource, saveSource, starterSource } from "./source-storage.ts"
+  import { loadSource, saveSource } from "./source-storage.ts"
   import { ReplTypeScriptClient } from "./typescript/client.ts"
   import { baseReplTypeContext, type ReplTypeContext } from "./typescript/protocol.ts"
 
-  let { handle, active = true, compact = false, layoutId, typeContext = baseReplTypeContext }: {
+  let { handle, active = true, compact = false, layoutId, initialTypeContext = baseReplTypeContext }: {
     handle: ColnHandle<Bindings>
     active?: boolean
     compact?: boolean
     layoutId: string
-    typeContext?: ReplTypeContext
+    initialTypeContext?: ReplTypeContext
   } = $props()
 
-  let source = $state(starterSource)
+  let source = $state(loadSource(untrack(() => handle.url)))
   let evaluation = $state<Evaluation>()
   let running = $state(false)
   let runVersion = 0
-  const typescript = new ReplTypeScriptClient(baseReplTypeContext)
+  const typescript = new ReplTypeScriptClient(untrack(() => initialTypeContext))
 
-  onMount(() => source = loadSource(handle.url))
   onDestroy(() => {
     runVersion += 1
     typescript.dispose()
-  })
-
-  $effect(() => {
-    typeContext.revision
-    typescript.setContext(typeContext)
   })
 
   async function runProgram(): Promise<void> {
@@ -66,9 +60,7 @@
   </div>
   <PaneGroup class="lab-repl-pane-group min-h-0 flex-1" direction="vertical" autoSaveId={layoutId}>
     <Pane id={`${layoutId}-editor-pane`} class="flex min-h-0 flex-col" defaultSize={72} minSize={45} maxSize={85}>
-      {#key typeContext.revision}
-        <ReplEditor value={source} disabled={running} {active} onchange={(value) => (source = value)} onrun={runProgram} {typescript} />
-      {/key}
+      <ReplEditor initialValue={source} disabled={running} onchange={(value) => (source = value)} onrun={runProgram} {typescript} />
     </Pane>
     <LabPaneResizer label="Resize TypeScript editor and output" orientation="horizontal" testId="repl-output-resizer" />
     <Pane id={`${layoutId}-output-pane`} class="min-h-0" defaultSize={28} minSize={15} maxSize={55}>

@@ -94,10 +94,6 @@ export class Router {
   }
 }
 
-export function readRoute(): Route {
-  return routeFromUrl(new URL(location.href), import.meta.env.BASE_URL)
-}
-
 export function routeFromUrl(url: URL, basePath = "/"): Route {
   const base = new URL(basePath, url.origin).pathname
   const relativePath = url.pathname.startsWith(base)

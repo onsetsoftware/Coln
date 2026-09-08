@@ -10,7 +10,7 @@ export type Compilation = {
 
 type CompileResultPointer = unknown
 
-type CompilerExports = {
+export type CompilerExports = {
   compile(source: string): Promise<CompileResultPointer>
   freeCompileResult(pointer: CompileResultPointer): Promise<void> | void
   getDiagnostics(asHtml: boolean, pointer: CompileResultPointer): Promise<string[]> | string[]
@@ -48,25 +48,58 @@ async function initializeCompiler(): Promise<Compiler> {
     wasmUrl: `${distUrl}coln.wasm`,
     ghc_wasm_jsffi: jsffiModule.default,
   })
-  let previousCompilation = Promise.resolve()
+  return createCompiler(exports)
+}
+
+export function createCompiler(exports: CompilerExports): Compiler {
+  type Request = {
+    source: string
+    resolve: (compilation: Compilation) => void
+    reject: (error: Error) => void
+  }
+
+  let running = false
+  let pending: Request | undefined
+
+  const compile = async (source: string): Promise<Compilation> => {
+    const pointer = await exports.compile(source)
+    try {
+      // GHC reactor exports must not be entered concurrently.
+      const prettyIr = await exports.prettyIr(pointer)
+      const diagnosticsHtml = await exports.getDiagnostics(true, pointer)
+      const irJson = await exports.irToJson(pointer)
+      return { diagnosticsHtml, prettyIr, irJson }
+    } finally {
+      await exports.freeCompileResult(pointer)
+    }
+  }
+
+  const runPending = async (): Promise<void> => {
+    if (running || !pending) return
+    running = true
+    const request = pending
+    pending = undefined
+    try {
+      request.resolve(await compile(request.source))
+    } catch (cause) {
+      request.reject(cause instanceof Error ? cause : new Error(String(cause)))
+    } finally {
+      running = false
+      void runPending()
+    }
+  }
 
   return {
     compile(source) {
-      const run = async () => {
-        const pointer = await exports.compile(source)
-        try {
-          // GHC reactor exports must not be entered concurrently.
-          const prettyIr = await exports.prettyIr(pointer)
-          const diagnosticsHtml = await exports.getDiagnostics(true, pointer)
-          const irJson = await exports.irToJson(pointer)
-          return { diagnosticsHtml, prettyIr, irJson }
-        } finally {
-          await exports.freeCompileResult(pointer)
+      return new Promise((resolve, reject) => {
+        if (pending) {
+          const error = new Error("Compilation superseded")
+          error.name = "AbortError"
+          pending.reject(error)
         }
-      }
-      const compilation = previousCompilation.then(run, run)
-      previousCompilation = compilation.then(() => undefined, () => undefined)
-      return compilation
+        pending = { source, resolve, reject }
+        void runPending()
+      })
     },
   }
 }

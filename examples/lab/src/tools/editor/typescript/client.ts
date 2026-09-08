@@ -49,7 +49,8 @@ export class ReplTypeScriptClient {
 
   setContext(context: ReplTypeContext): void {
     if (context.revision === this.#contextRevision) return
-    this.#ready = this.#contextRequest(context)
+    this.#contextRevision = context.revision
+    this.#ready = this.#ready.then(() => this.#contextRequest(context))
   }
 
   dispose(): void {
@@ -66,7 +67,6 @@ export class ReplTypeScriptClient {
   async #contextRequest(context: ReplTypeContext): Promise<void> {
     try {
       await this.#send({ type: "context", context: plainContext(context) })
-      this.#contextRevision = context.revision
     } catch (cause) {
       this.#failure ??= asError(cause)
     }
